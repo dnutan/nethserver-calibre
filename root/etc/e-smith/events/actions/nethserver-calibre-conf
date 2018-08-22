@@ -42,7 +42,7 @@ if ($event eq 'nethserver-calibre-update') {
 	}
 
 	# create 'calibre' system user
-	system('if ! getent passwd calibre >/dev/null; then useradd -r -U -s /sbin/nologin -d /var/lib/nethserver/calibre -c "Calibre User" calibre;');
+	system('if ! getent passwd calibre >/dev/null; then useradd -r -U -s /sbin/nologin -d /var/lib/nethserver/calibre -c "Calibre User" calibre;fi');
 
 	# Create data directories and set permissions
 	make_path('/var/lib/nethserver/calibre/.config/calibre', '/var/lib/nethserver/calibre/libraries', {
@@ -67,8 +67,8 @@ if (! @libraries) {
 
 # enable/start service
 if ($status eq 'enabled') {
-	# system('systemctl daemon-reload');
-	# system('systemctl enable calibre-server --now');
+	system('systemctl daemon-reload');
+	system('systemctl enable calibre-server --now');
 } else {
 
 }
