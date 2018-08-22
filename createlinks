@@ -1,0 +1,73 @@
+#!/usr/bin/perl -w
+#
+# Copyright (C) 201 Nethesis S.r.l.
+# http://www.nethesis.it - support@nethesis.it
+# 
+# This script is part of NethServer.
+# 
+# NethServer is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License,
+# or any later version.
+# 
+# NethServer is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with NethServer.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+use esmith::Build::CreateLinks  qw(:all);
+
+#--------------------------------------------------
+# Event nethserver-calibre-update 
+#--------------------------------------------------
+
+$event = 'nethserver-calibre-update';
+
+event_actions($event, qw(
+  initialize-default-databases 00
+  nethserver-calibre-conf 20
+));
+
+event_templates($event, qw(
+  /etc/httpd/conf.d/zz_calibreserver.conf
+  /usr/lib/systemd/system/calibre-server.service
+));
+
+event_services($event, qw(
+  httpd reload
+  calibre-server restart
+));
+
+#--------------------------------------------------
+# Event nethserver-calibre-save
+#--------------------------------------------------
+
+$event = 'nethserver-calibre-save';
+
+event_actions($event, qw(
+  nethserver-calibre-conf 20
+));
+
+event_templates($event, qw(
+  /etc/httpd/conf.d/zz_calibreserver.conf
+  /usr/lib/systemd/system/calibre-server.service
+));
+
+event_services($event, qw(
+  httpd reload
+  calibre-server restart
+));
+
+#--------------------------------------------------
+# actions for tls-policy-save event
+#--------------------------------------------------
+#
+# $event = 'tls-policy-save';
+#
+# event_templates($event, qw(
+#   /etc/httpd/conf.d/zz_calibreserver.conf
+# ));

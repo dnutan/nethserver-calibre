@@ -1,0 +1,56 @@
+{
+    my $port = $calibre{'TCPPort'} || 8008;
+    my $prefix = $calibre{'URLPrefix'} || '';
+    my $vhost = $calibre{'VirtualHost'} || '';
+    
+
+    if ($vhost ne '') {
+        $OUT = qq(
+            <VirtualHost *:80>
+                IncludeOptional conf.d/default-virtualhost.inc
+            </VirtualHost>
+
+            <VirtualHost *:80>
+                ServerName $vhost
+                RedirectMatch 301 ^(?!/.well-known/acme-challenge/).* https://$vhost
+            </VirtualHost>
+
+            <VirtualHost *:80>
+                ServerName $vhost
+                Redirect / https://$vhost/
+            </VirtualHost>
+
+            # <Proxy *>
+            #     Require all granted
+            # </Proxy>
+
+            <VirtualHost *:443>
+                ServerName $vhost
+                SSLEngine on
+                AllowEncodedSlashes NoDecode
+                RewriteEngine On
+                # RewriteRule ^/(.*) http://127.0.0.1:$port/\$1 [proxy]
+                RewriteCond %\{HTTPS\} !=on
+                RewriteRule (.*) https://%\{SERVER_NAME\}%\{REQUEST_URI\} [END,QSA,R=permanent]
+
+                <Location />
+                    # Require all granted
+                    ProxyPass http://127.0.0.1:$port/
+                    ProxyPassReverse http://127.0.0.1:$port/
+                </Location>
+
+            </VirtualHost>
+        );
+    } elsif ($prefix ne '') {
+        # [TODO] code for reverse proxy to subdirectory
+        $OUT = qq(
+        AllowEncodedSlashes NoDecode
+        <Location "/$prefix">
+            RedirectMatch permanent ^/$prefix\$ /$prefix/
+            # ProxyPreserveHost On
+            ProxyPass "http://127.0.0.1:$port/$prefix/"
+            ProxyPassReverse "http://127.0.0.1:$port/$prefix/"
+        </Location>
+        );
+    }
+}

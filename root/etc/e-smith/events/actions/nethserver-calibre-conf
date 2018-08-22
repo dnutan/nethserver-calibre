@@ -1,0 +1,74 @@
+#!/usr/bin/perl
+
+#
+# Copyright (C) 2017 Nethesis S.r.l.
+# http://www.nethesis.it - nethserver@nethesis.it
+#
+# This script is part of NethServer.
+#
+# NethServer is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License,
+# or any later version.
+#
+# NethServer is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with NethServer.  If not, see COPYING.
+#
+
+use strict;
+use warnings;
+
+use esmith::ConfigDB;
+use esmith::event;
+use File::Path qw(make_path);
+
+my $event = shift || '';
+my $db = esmith::ConfigDB->open() || die ("Can't open configuration db");
+my $defaultLibrary = '/var/lib/nethserver/calibre/libraries/Books/';
+my @libraries = split(/;/, $db->get_prop('calibre', 'Libraries'));
+my $status = $db->get_prop('calibre', 'status') || 'disabled';
+
+
+if ($event eq 'nethserver-calibre-update') {
+
+	# install calibre
+	if (! -e '/opt/calibre') {
+		system('sudo -v && wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sudo sh /dev/stdin install_dir=/opt');
+	}
+
+	# create 'calibre' system user
+	system('if ! getent passwd calibre >/dev/null; then useradd -r -U -s /sbin/nologin -d /var/lib/nethserver/calibre -c "Calibre User" calibre;');
+
+	# Create data directories and set permissions
+	make_path('/var/lib/nethserver/calibre/.config/calibre', '/var/lib/nethserver/calibre/libraries', {
+	    chmod => 0755,
+	    group => 'calibre',
+	    owner => 'calibre',
+	});
+}
+
+# create default library
+if (! @libraries) {
+
+	if (! -e $defaultLibrary.'metadata.db') {
+		system('/usr/bin/systemctl stop calibre-server');
+		system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '.$defaultLibrary.'"');
+		system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove 1 --with-library '.$defaultLibrary.'"');
+	}
+	$db->set_prop('calibre', 'Libraries', $defaultLibrary);
+}
+
+# create calibre db users
+
+# enable/start service
+if ($status eq 'enabled') {
+	# system('systemctl daemon-reload');
+	# system('systemctl enable calibre-server --now');
+} else {
+
+}
