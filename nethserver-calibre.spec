@@ -15,6 +15,12 @@ BuildArch: noarch
 %description
 NethServer Calibre Content Server configuration
 
+%pre
+if ! getent passwd calibre >/dev/null; then
+   # Add the "calibre" user
+   useradd -r -U -s /sbin/nologin -d /var/lib/nethserver/calibre -c "Calibre User" calibre
+fi
+
 %prep
 %setup -q
 
