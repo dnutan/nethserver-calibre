@@ -3,7 +3,8 @@ Version: 0.0.1
 Release: 1%{?dist}
 Summary: NethServer Calibre Content Server configuration
 
-License: GPL
+License: GPLv2
+URL: https://github.com/dnutan/%{name}
 Source: %{name}-%{version}.tar.gz
 
 BuildRequires: nethserver-devtools
@@ -34,10 +35,10 @@ cat %{name}-%{version}-filelist
 %files -f %{name}-%{version}-filelist
 %defattr(-,root,root)
 %doc COPYING
-%doc README.rst
+#%%doc README.rst
 
 %dir %{_nseventsdir}/%{name}-update
 
 %changelog
-* Wed Aug 22 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.1-1
+* Wed Aug 22 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.1-1.ns7
 - Initial Development Release
