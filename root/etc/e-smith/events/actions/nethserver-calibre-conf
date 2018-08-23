@@ -68,8 +68,8 @@ if (! @libraries) {
 	if (-f $globalPref) {
 		local($^I, @ARGV) = ('.bak', $globalPref);
 		while (<>) {
-		  s/^(?:library_path = )(.*)$/\'$defaultLibrary\'/;
-		  s/^(?:database_path = )(.*)$/\'$defaultLibrary\/metadata\.db\'/;
+		  s/^(library_path = )(.*)$/\'${1}$defaultLibrary\'/;
+		  s/^(database_path = )(.*)$/\'${1}$defaultLibrary\/metadata\.db\'/;
 		  print;
 		  close ARGV if eof;
 		}
