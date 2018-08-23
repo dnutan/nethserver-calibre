@@ -41,12 +41,12 @@ if ($event eq 'nethserver-calibre-update') {
 	system("if ! getent passwd calibre >/dev/null; then useradd -r -U -s /sbin/nologin -d $dataPath -c 'Calibre User' calibre;fi");
 
 	# Create directories and set permissions
-	make_path("$dataPath/.config/calibre", "$dataPath/libraries", "/var/log/calibre" {
+	make_path("$dataPath/.config/calibre", "$dataPath/libraries", "/var/log/calibre", {
 	    chmod => 0755,
 	    group => 'calibre',
 	    owner => 'calibre',
 	});
-	
+
 	# install calibre
 	if (! -d '/opt/calibre') {
 		system('sudo -v && wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sudo sh /dev/stdin install_dir=/opt');
