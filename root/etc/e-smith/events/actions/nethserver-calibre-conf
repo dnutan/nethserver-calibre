@@ -29,23 +29,25 @@ use File::Path qw(make_path);
 
 my $event = shift || '';
 my $db = esmith::ConfigDB->open() || die ("Can't open configuration db");
-my $defaultLibrary = '/var/lib/nethserver/calibre/libraries/Books/';
-my @libraries = split(/;/, $db->get_prop('calibre', 'Libraries'));
+my dataPath = '/var/lib/nethserver/calibre'; # without trailing slash
+my $defaultLibrary = $dataPath.'/libraries/Books';
+my $globalPref = $dataPath.'/.config/calibre/global.py';
+my @libraries = split(/;/, ($db->get_prop('calibre', 'Libraries') || ''));
 my $status = $db->get_prop('calibre', 'status') || 'disabled';
 
 
 if ($event eq 'nethserver-calibre-update') {
 
 	# install calibre
-	if (! -e '/opt/calibre') {
+	if (! -d '/opt/calibre') {
 		system('sudo -v && wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sudo sh /dev/stdin install_dir=/opt');
 	}
 
 	# create 'calibre' system user
-	system('if ! getent passwd calibre >/dev/null; then useradd -r -U -s /sbin/nologin -d /var/lib/nethserver/calibre -c "Calibre User" calibre;fi');
+	system("if ! getent passwd calibre >/dev/null; then useradd -r -U -s /sbin/nologin -d $dataPath -c 'Calibre User' calibre;fi");
 
 	# Create data directories and set permissions
-	make_path('/var/lib/nethserver/calibre/.config/calibre', '/var/lib/nethserver/calibre/libraries', {
+	make_path("$dataPath/.config/calibre", "$dataPath/libraries", {
 	    chmod => 0755,
 	    group => 'calibre',
 	    owner => 'calibre',
@@ -55,12 +57,24 @@ if ($event eq 'nethserver-calibre-update') {
 # create default library
 if (! @libraries) {
 
-	if (! -e $defaultLibrary.'metadata.db') {
+	if (! -e $defaultLibrary.'/metadata.db') {
 		system('/usr/bin/systemctl stop calibre-server');
+		# NOTE: if a bug is found by removing book with id #1, create empty book with --identifier (or with any other identificable option)
 		system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '.$defaultLibrary.'"');
 		system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove 1 --with-library '.$defaultLibrary.'"');
 	}
 	$db->set_prop('calibre', 'Libraries', $defaultLibrary);
+
+	# modify global.py preferences file
+	if (-f $globalPref) {
+		local($^I, $ARGV) = ('.bak', $globalPref);
+		while (<>) {
+		  s/^(?:library_path = )(.*)$/\'$defaultLibrary\'/;
+		  s/^(?:database_path = )(.*)$/\'$defaultLibrary\/metadata\.db\'/;
+		  print;
+		  close ARGV if eof;
+		}
+	}
 }
 
 # create calibre db users
@@ -69,6 +83,4 @@ if (! @libraries) {
 if ($status eq 'enabled') {
 	system('systemctl daemon-reload');
 	system('systemctl enable calibre-server --now');
-} else {
-
 }
