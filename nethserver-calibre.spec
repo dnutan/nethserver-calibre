@@ -8,33 +8,37 @@ URL: https://github.com/dnutan/%{name}
 Source: %{name}-%{version}.tar.gz
 
 BuildRequires: nethserver-devtools
-Requires: nethserver-httpd perl wget
+Requires: perl nethserver-httpd wget
 
 BuildArch: noarch
 
 %description
 NethServer Calibre Content Server configuration
 
-%pre
-if ! getent passwd calibre >/dev/null; then
+#%pre
+#if ! getent passwd calibre >/dev/null; then
    # Add the "calibre" user
-   useradd -r -U -s /sbin/nologin -d /var/lib/nethserver/calibre -c "Calibre User" calibre
-fi
+#   useradd -r -U -s /sbin/nologin -d /var/lib/nethserver/calibre -c "Calibre User" calibre
+#fi
 
 %prep
 %setup -q
 
 %build
-#%%{makedocs}
+%{makedocs}
 perl createlinks
 
 %install
 (cd root; find . -depth -print | cpio -dump %{buildroot})
 mkdir -p %{buildroot}/var/lib/nethserver/calibre/{.config/calibre,libraries}
 mkdir -p %{buildroot}/var/log/calibre
-%{genfilelist} %{buildroot} \
-  --dir /var/lib/nethserver/calibre 'attr(0755,calibre,calibre)' \
-  --dir /var/log/calibre 'attr(0755,calibre,calibre)' >  %{name}-%{version}-filelist
+%{genfilelist} %{buildroot} >  %{name}-%{version}-filelist
+#%{genfilelist} %{buildroot} \
+#%{genfilelist} %{buildroot} \
+#  --dir /var/lib/nethserver/calibre \
+#  --dir /var/log/calibre >  %{name}-%{version}-filelist
+#  --dir /var/lib/nethserver/calibre 'attr(0755,calibre,calibre)' \
+#  --dir /var/log/calibre 'attr(0755,calibre,calibre)' >  %{name}-%{version}-filelist
 
 cat %{name}-%{version}-filelist
 
