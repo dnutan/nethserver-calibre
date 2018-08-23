@@ -46,8 +46,8 @@ if ($event eq 'nethserver-calibre-update') {
 	# create 'calibre' system user
 	system("if ! getent passwd calibre >/dev/null; then useradd -r -U -s /sbin/nologin -d $dataPath -c 'Calibre User' calibre;fi");
 
-	# Create data directories and set permissions
-	make_path("$dataPath/.config/calibre", "$dataPath/libraries", {
+	# Create directories and set permissions
+	make_path("$dataPath/.config/calibre", "$dataPath/libraries", "/var/log/calibre" {
 	    chmod => 0755,
 	    group => 'calibre',
 	    owner => 'calibre',
