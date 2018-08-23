@@ -29,7 +29,7 @@ use File::Path qw(make_path);
 
 my $event = shift || '';
 my $db = esmith::ConfigDB->open() || die ("Can't open configuration db");
-my dataPath = '/var/lib/nethserver/calibre'; # without trailing slash
+my $dataPath = '/var/lib/nethserver/calibre'; # without trailing slash
 my $defaultLibrary = $dataPath.'/libraries/Books';
 my $globalPref = $dataPath.'/.config/calibre/global.py';
 my @libraries = split(/;/, ($db->get_prop('calibre', 'Libraries') || ''));
