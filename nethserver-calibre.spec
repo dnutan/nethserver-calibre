@@ -9,6 +9,7 @@ Source: %{name}-%{version}.tar.gz
 
 BuildRequires: nethserver-devtools
 Requires: perl nethserver-httpd wget
+Requires: python2
 
 BuildArch: noarch
 
@@ -30,8 +31,8 @@ perl createlinks
 
 %install
 (cd root; find . -depth -print | cpio -dump %{buildroot})
-mkdir -p %{buildroot}/var/lib/nethserver/calibre/{.config/calibre,libraries}
-mkdir -p %{buildroot}/var/log/calibre
+# mkdir -p %{buildroot}/var/lib/nethserver/calibre/{.config/calibre,libraries}
+# mkdir -p %{buildroot}/var/log/calibre
 %{genfilelist} %{buildroot} >  %{name}-%{version}-filelist
 #%{genfilelist} %{buildroot} \
 #%{genfilelist} %{buildroot} \
