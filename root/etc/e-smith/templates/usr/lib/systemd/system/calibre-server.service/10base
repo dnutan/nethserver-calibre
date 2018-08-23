@@ -7,7 +7,7 @@
     my $authMode = $calibre{'AuthMode'} || '';
     my $banAfter = $calibre{'BanAfter'} || '';
     my $banFor = $calibre{'BanFor'} || '';
-    my @libraries = split(/;/, $calibre{'Libraries'}) || '/var/lib/nethserver/calibre/libraries/Books/';
+    my @libraries = split(/;/, ($calibre{'Libraries'} || '/var/lib/nethserver/calibre/libraries/Books/'));
     my $numPerPage = $calibre{'NumPerPage'} || '';
     my $opdsItems = $calibre{'MaxOPDSItems'} || '';
     my $opdsUngItems = $calibre{'MaxOPDSUngroupedItems'} || '';
