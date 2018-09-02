@@ -23,7 +23,7 @@ namespace NethServer\Module\Dashboard\Applications;
 /**
  * Calibre Content Server
  *
- * @author @dnutan
+ * @author @dnutan (based on Giacomo Sanchietti's work)
  */
 class Calibre extends \Nethgui\Module\AbstractModule implements \NethServer\Module\Dashboard\Interfaces\ApplicationInterface
 {

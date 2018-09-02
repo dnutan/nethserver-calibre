@@ -1,0 +1,8 @@
+/var/log/calibre/calibre-server.log
+/var/log/calibre/calibre-server-access.log {
+  missingok
+  notifempty
+  su calibre calibre
+  create 640 calibre calibre
+
+}

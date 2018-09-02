@@ -1,85 +1,136 @@
 #!/usr/bin/perl
 
-#
-# Copyright (C) 2017 Nethesis S.r.l.
-# http://www.nethesis.it - nethserver@nethesis.it
-#
-# This script is part of NethServer.
-#
-# NethServer is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License,
-# or any later version.
-#
-# NethServer is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with NethServer.  If not, see COPYING.
-#
-
 use strict;
 use warnings;
 
+use esmith::DB::db;
 use esmith::ConfigDB;
 use esmith::event;
 use File::Path qw(make_path);
 
 my $event = shift || '';
-my $db = esmith::ConfigDB->open() || die ("Can't open configuration db");
-my $dataPath = '/var/lib/nethserver/calibre'; # without trailing slash
-my $defaultLibrary = $dataPath.'/libraries/Books';
-my $globalPref = $dataPath.'/.config/calibre/global.py';
-my @libraries = split(/;/, ($db->get_prop('calibre', 'Libraries') || ''));
-my $status = $db->get_prop('calibre', 'status') || 'disabled';
+my $cdb   = esmith::ConfigDB->open() || die("Can't open configuration db");
+my $caldb = esmith::DB::db->open('calibre') || die("Can't open calibre db");
+
+my $data_dir        = '/var/lib/nethserver/calibre';
+my $libraries_dir   = $data_dir . '/libraries';
+my $default_library = $libraries_dir . '/Books';
+my $global_pref     = $data_dir . '/.config/calibre/global.py';
+my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
+my $status          = $cdb->get_prop('calibre', 'status') || 'disabled';
+
+#my @libraries      = split(/;/, ($cdb->get_prop('calibre', 'Libraries') || ''));
+my @libraries;
+foreach my $lib ($caldb->get_all_by_prop('type' => 'library')) {
+
+    # get path and trim whitespace
+    if ( ! my $path = $lib->prop('Path') =~ s/^\s+|\s+$//) {
+        warn("[NOTICE] $lib->key — library invalid path\n");
+        next;
+    }
+
+    # validate: use of restricted characters
+    if ($path =~ m/$pattern/) {
+        warn("[NOTICE] $lib->key library — invalid path: '$path'\n");
+        next;
+    }
+
+    # build absoulte path (consider File::Spec)
+    $path =~ s{(?=^[^/])}{$libraries_dir/};
+
+    # check if path exists
+    if (-d $path) {
+        # check if writable by calibre user
+        # system("TERM=dumb runuser -s /bin/bash calibre -c \"/usr/bin/test -w $path\"");
+        if (system("TERM=dumb runuser -s /bin/bash calibre -c \"[ -w $path ]\"") != 0 ) {
+            warn("[NOTICE] User: calibre; No write access to '$path'\n");
+            next;
+        }
+
+        # create as new library
+        if ( ! -e $path . '/metadata.db') {
+            system('/usr/bin/systemctl stop calibre'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
+            my $exit_code = system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path'"));
+            system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));
+            if ($exit_code != 0) warn("[NOTICE] $lib->key library creation failed\n");
+        }
+
+    }
+    else {
+        if ($path =~ m/^$libraries_dir/) {
+            # create as new library
+            system('/usr/bin/systemctl stop calibre'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
+            my $exit_code = system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path'"));
+            system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));
+            if ($exit_code != 0) warn("[NOTICE] $lib->key library creation failed\n");
+        }
+        else {
+            warn("[NOTICE] $lib->key library '$path' does not exist\n");
+        }
+    }
+
+    # validated data
+    if (-e $path . '/metadata.db') {
+        push @libraries, $path;
+    }
+}
 
 
 if ($event eq 'nethserver-calibre-update') {
-	# create 'calibre' system user
-	system("if ! getent passwd calibre >/dev/null; then useradd -r -U -s /sbin/nologin -d $dataPath -c 'Calibre User' calibre;fi");
+    # create 'calibre' system user
+    system("if ! getent passwd calibre >/dev/null; then 
+                useradd -r -U -s /sbin/nologin -d $data_dir -c 'Calibre User' calibre;
+            fi");
+    if ($? == 0) warn("[INFO] User 'calibre' created.\n");
 
-	# Create directories and set permissions
-	make_path("$dataPath/.config/calibre", "$dataPath/libraries", "/var/log/calibre", {
-	    chmod => 0755,
-	    group => 'calibre',
-	    owner => 'calibre',
-	});
+    # Create directories and set permissions
+    make_path(  "$data_dir/.config/calibre", 
+                "$data_dir/libraries", 
+                "/var/log/calibre", {
+        chmod => 0755,
+        group => 'calibre',
+        owner => 'calibre',
+    });
 
-	# install calibre
-	if (! -d '/opt/calibre') {
-		system('sudo -v && wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sudo sh /dev/stdin install_dir=/opt');
-	}
+    # install calibre
+    if ( ! -d '/opt/calibre') { # consider checking exec instead (if dir created from spec %files)
+        # SECURITY WARNING: about to run a script without verifying code. Do we trust the source?
+        # WARNING: what about redirections (404) and connections problems?
+        # system('sudo -v && wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sudo sh /dev/stdin install_dir=/opt');
+        system('wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin install_dir=/opt');
+    }
 }
 
 # create default library
-if (! @libraries) {
+if ( ! @libraries) {
+    if ( ! -e $default_library.'/metadata.db') {
+        system('/usr/bin/systemctl stop calibre');
+        $exit_code = system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library ' . $default_library . '"');
+        if ($exit_code != 0) die("[ERROR] default library creation failed\n");
+        system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library ' . $default_library . '"');
+    }
+    # $cdb->set_prop('calibre', 'Libraries', $default_library);
+    $caldb->set_prop('default', 'library', 'Path', $default_library);
 
-	if (! -e $defaultLibrary.'/metadata.db') {
-		system('/usr/bin/systemctl stop calibre-server');
-		# NOTE: if a bug is found by removing book with id #1, create empty book with --identifier (or with any other identificable option)
-		system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '.$defaultLibrary.'"');
-		system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove 1 --with-library '.$defaultLibrary.'"');
-	}
-	$db->set_prop('calibre', 'Libraries', $defaultLibrary);
+    # modify global.py preferences file
+    if (-f $global_pref) {
+        local($^I, @ARGV) = ('.bak', $global_pref);
+        while (<>) {
+          # s/^(library_path = )(.*)$/'${1}$default_library'/;
+          # s/^(database_path = )(.*)$/'${1}$default_library\/metadata.db'/;
+          s{(?<=^library_path = )(?:.*)}{'$default_library'};
+          s{(?<=^database_path = )(?:.*)}{'$default_library/metadata.db'};
 
-	# modify global.py preferences file
-	if (-f $globalPref) {
-		local($^I, @ARGV) = ('.bak', $globalPref);
-		while (<>) {
-		  s/^(library_path = )(.*)$/\'${1}$defaultLibrary\'/;
-		  s/^(database_path = )(.*)$/\'${1}$defaultLibrary\/metadata\.db\'/;
-		  print;
-		  close ARGV if eof;
-		}
-	}
+          print;
+          close ARGV if eof;
+        }
+    }
 }
 
 # create calibre db users
 
 # enable/start service
-if ($status eq 'enabled') {
-	system('systemctl daemon-reload');
-	system('systemctl enable calibre-server --now');
-}
+#if ($status eq 'enabled') {
+#   system('systemctl daemon-reload');
+#   system('systemctl enable calibre --now');
+#}

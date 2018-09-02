@@ -1,0 +1,94 @@
+{
+    use esmith::DB::db;
+
+    my $db = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db");
+    my $options = '';
+
+    # get values from db
+    my $auth            = $calibre{'Auth'} || 'disabled';
+    my $auth_mode       = $calibre{'AuthMode'} || '';
+    my $ban_after       = $calibre{'BanAfter'} || '';
+    my $ban_for         = $calibre{'BanFor'} || '';
+    # my @libraries       = split(/;/, ($calibre{'Libraries'} || '/var/lib/nethserver/calibre/libraries/Books'));
+    my $num_per_page    = $calibre{'NumPerPage'} || '';
+    my $opds_items      = $calibre{'MaxOPDSItems'} || '';
+    my $opds_ung_items  = $calibre{'MaxOPDSUngroupedItems'} || '';
+    my $port            = $calibre{'TCPPort'} || '8008';    # http-alt: 8008, unassigned: 8084, 8085, 8089
+    my $prefix          = $calibre{'URLPrefix'} || 'calibre';
+    my $userdb          = $calibre{'UserDB'} || '/var/lib/nethserver/calibre/.config/calibre/server-users.sqlite';
+    my $vhost           = $calibre{'VirtualHost'} || '';
+
+    my @libraries;
+    foreach my $lib ($caldb->get_all_by_prop('type' => 'library')) {
+
+        # get path and trim whitespace
+        if ( ! my $path = $lib->prop('Path') =~ s/^\s+|\s+$//) {
+            warn("[NOTICE] $lib->key — library invalid path\n");
+            next;
+        }
+
+        # validate: use of restricted characters
+        if ($path =~ m/$pattern/) {
+            warn("[NOTICE] $lib->key library — invalid path: '$path'\n");
+            next;
+        }
+
+        # build absoulte path (consider File::Spec)
+        $path =~ s{(?=^[^/])}{$libraries_dir/};
+    
+        # looks like a calibre library
+        if (-e $path . '/metadata.db') {
+            push @libraries, $path;
+        }
+    }
+
+    ## Options: see https://manual.calibre-ebook.com/generated/en/calibre-server.html
+
+    # $options .= " --pidfile=/var/run/calibre.pid";
+    if ($num_per_page =~ m/^\d+$/) { $options .= " --num-per-page=$num_per_page"; }
+
+    # Connection
+    $options .= " --listen-on=127.0.0.1";
+    $options .= " --port=$port";
+    if ( ! $vhost && $prefix) { $options .= " --url-prefix=\"/$prefix\""; }
+    # if ($timeout =~ m/^\d+$/) { $options .= " --timeout=$timeout"; }
+
+    # User Authentication
+    if ($auth eq 'enabled') {
+        $options .= " --enable-auth";
+        if ($auth_mode) { $options .= " --auth-mode=$auth_mode"; }
+        $options .= " --userdb=\"$userdb\"";
+        if ($ban_after =~ m/^\d+$/) { $options .= " --ban-after=$ban_after"; }
+        if ($ban_for =~ m/^\d+$/)   { $options .= " --ban-for=$ban_for"; }
+    }
+
+    # Logs
+    $options .= " --log=/var/log/calibre/calibre-server.log";
+    $options .= " --access-log=/var/log/calibre/calibre-server-access.log";
+
+    # OPDS feeds
+    if ($opds_items =~ m/^\d+$/)     { $options .= " --max-opds-items=$opds_items"; }
+    if ($opds_ung_items =~ m/^\d+$/) { $options .= " --max-opds-ungrouped-items=$opds_ung_items"; }
+
+    # Libraries of books
+    foreach (@libraries) {
+        $options .= ' "' . $_ . '"';
+    }
+
+    #
+    # Calibre Content Server Service
+    #
+    $OUT .= "[Unit]\n";
+    $OUT .= "Description=calibre content server\n";
+    $OUT .= "After=network.target\n\n";
+
+    $OUT .= "[Service]\n";
+    $OUT .= "Type=simple\n";
+    $OUT .= "User=calibre\n";
+    $OUT .= "Group=calibre\n";
+    $OUT .= "ExecStart=/usr/bin/calibre-server $options\n\n";
+
+    $OUT .= "[Install]\n";
+    $OUT .= "Alias=calibre-server\n";
+    $OUT .= "WantedBy=multi-user.target\n";
+}

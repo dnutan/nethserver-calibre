@@ -1,15 +1,16 @@
 Name: nethserver-calibre
-Version: 0.0.1
+Version: 0.0.2
 Release: 1%{?dist}
 Summary: NethServer Calibre Content Server configuration
 
-License: GPLv2
+License: GPLv3
 URL: https://github.com/dnutan/%{name}
 Source: %{name}-%{version}.tar.gz
 
 BuildRequires: nethserver-devtools
-Requires: perl nethserver-httpd wget
+Requires: perl
 Requires: python2
+Requires: nethserver-httpd wget
 
 BuildArch: noarch
 
@@ -30,6 +31,7 @@ NethServer Calibre Content Server configuration
 perl createlinks
 
 %install
+#rm -rf %{buildroot}
 (cd root; find . -depth -print | cpio -dump %{buildroot})
 # mkdir -p %{buildroot}/var/lib/nethserver/calibre/{.config/calibre,libraries}
 # mkdir -p %{buildroot}/var/log/calibre
@@ -45,7 +47,7 @@ cat %{name}-%{version}-filelist
 
 %files -f %{name}-%{version}-filelist
 %defattr(-,root,root)
-%doc COPYING
+%license COPYING
 #%%doc README.rst
 
 %dir %{_nseventsdir}/%{name}-update
@@ -53,3 +55,7 @@ cat %{name}-%{version}-filelist
 %changelog
 * Wed Aug 22 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.1-1.ns7
 - Initial Development Release
+
+* Sun Sep 01 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.2-1.ns7
+- split db
+- refactor handling of calibre libraries
