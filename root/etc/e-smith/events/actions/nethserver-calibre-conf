@@ -138,6 +138,12 @@ if ( ! @libraries) {
 
 # force calibre.service template expansion (otherwise template expansion happens before library creation !!!)
 system("/sbin/e-smith/expand-template /usr/lib/systemd/system/calibre.service");
+if ($? == 0){
+    warn("[INFO] expand-tempalte calibre.service succeded.\n");
+}
+else {
+    warn("[NOTICE] expand-tempalte calibre.service failed.\n");
+}
 
 
 # create calibre db users
