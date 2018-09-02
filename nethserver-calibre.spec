@@ -53,9 +53,9 @@ cat %{name}-%{version}-filelist
 %dir %{_nseventsdir}/%{name}-update
 
 %changelog
-* Wed Aug 22 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.1-1.ns7
-- Initial Development Release
-
 * Sun Sep 01 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.2-1.ns7
 - split db
 - refactor handling of calibre libraries
+
+* Wed Aug 22 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.1-1.ns7
+- Initial Development Release
