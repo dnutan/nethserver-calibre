@@ -27,12 +27,12 @@ if ($event eq 'nethserver-calibre-update') {
 
     # Create directories and set permissions
     make_path(  "$data_dir/.config/calibre", 
-                "$data_dir/libraries", 
+                "$libraries_dir", 
                 "/var/log/calibre", {
         chmod => 0755,
         group => 'calibre',
         owner => 'calibre',
-    });
+    }) || die("[ERROR] Failed to create calibre data paths");
 
     # install calibre
     if ( ! -d '/opt/calibre') { # consider checking exec instead (if dir created from spec %files)

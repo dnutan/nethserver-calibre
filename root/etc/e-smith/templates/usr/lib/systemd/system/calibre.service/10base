@@ -27,7 +27,6 @@
     if ( ! @libs) {die("[ERROR] No libraries.");}
 
     foreach my $lib (@libs) {
-
         # get path and trim whitespace
         $path = $lib->prop('Path');
         $path =~ s/^\s+|\s+$//;
@@ -50,6 +49,7 @@
             push @libraries, $path;
         }
     }
+    if ( ! @libraries) {die("[ERROR] No libraries.");}
 
     ## Options: see https://manual.calibre-ebook.com/generated/en/calibre-server.html
 
