@@ -17,12 +17,21 @@
     my $prefix          = $calibre{'URLPrefix'} || 'calibre';
     my $userdb          = $calibre{'UserDB'} || '/var/lib/nethserver/calibre/.config/calibre/server-users.sqlite';
     my $vhost           = $calibre{'VirtualHost'} || '';
+    my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
+    my $data_dir        = '/var/lib/nethserver/calibre';
+    my $libraries_dir   = $data_dir . '/libraries';
+    my $default_library = $libraries_dir . '/Books';
 
     my @libraries;
-    foreach my $lib ($caldb->get_all_by_prop('type' => 'library')) {
+    my @libs = $caldb->get_all_by_prop('type' => 'library');
+    if ( ! @libs) {die("[ERROR] No libraries.");}
+
+    foreach my $lib (@libs) {
 
         # get path and trim whitespace
-        if ( ! my $path = ($lib->prop('Path') =~ s/^\s+|\s+$//)) {
+        $path = $lib->prop('Path');
+        $path =~ s/^\s+|\s+$//;
+        if ( ! $path) {
             warn("[NOTICE] $lib->key — library invalid path\n");
             next;
         }
@@ -50,16 +59,16 @@
     # Connection
     $options .= " --listen-on=127.0.0.1";
     $options .= " --port=$port";
-    if ( ! $vhost && $prefix) { $options .= " --url-prefix=\"/$prefix\""; }
+    if ( ! $vhost && $prefix) {$options .= " --url-prefix=\"/$prefix\"";}
     # if ($timeout =~ m/^\d+$/) { $options .= " --timeout=$timeout"; }
 
     # User Authentication
     if ($auth eq 'enabled') {
         $options .= " --enable-auth";
-        if ($auth_mode) { $options .= " --auth-mode=$auth_mode"; }
+        if ($auth_mode) { $options .= " --auth-mode=$auth_mode";}
         $options .= " --userdb=\"$userdb\"";
-        if ($ban_after =~ m/^\d+$/) { $options .= " --ban-after=$ban_after"; }
-        if ($ban_for =~ m/^\d+$/)   { $options .= " --ban-for=$ban_for"; }
+        if ($ban_after =~ m/^\d+$/) {$options .= " --ban-after=$ban_after";}
+        if ($ban_for =~ m/^\d+$/)   {$options .= " --ban-for=$ban_for";}
     }
 
     # Logs
@@ -67,8 +76,8 @@
     $options .= " --access-log=/var/log/calibre/calibre-server-access.log";
 
     # OPDS feeds
-    if ($opds_items =~ m/^\d+$/)     { $options .= " --max-opds-items=$opds_items"; }
-    if ($opds_ung_items =~ m/^\d+$/) { $options .= " --max-opds-ungrouped-items=$opds_ung_items"; }
+    if ($opds_items =~ m/^\d+$/)     {$options .= " --max-opds-items=$opds_items"; }
+    if ($opds_ung_items =~ m/^\d+$/) {$options .= " --max-opds-ungrouped-items=$opds_ung_items"; }
 
     # Libraries of books
     foreach (@libraries) {

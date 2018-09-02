@@ -21,60 +21,66 @@ my $status          = $cdb->get_prop('calibre', 'status') || 'disabled';
 
 #my @libraries      = split(/;/, ($cdb->get_prop('calibre', 'Libraries') || ''));
 my @libraries;
-foreach my $lib ($caldb->get_all_by_prop('type' => 'library')) {
+my @libs = $caldb->get_all_by_prop('type' => 'library');
 
-    # get path and trim whitespace
-    if ( ! my $path = ($lib->prop('Path') =~ s/^\s+|\s+$//)) {
-        warn("[NOTICE] $lib->key — library invalid path\n");
-        next;
-    }
+if (@libs) {
+    foreach my $lib (@libs) {
 
-    # validate: use of restricted characters
-    if ($path =~ m/$pattern/) {
-        warn("[NOTICE] $lib->key library — invalid path: '$path'\n");
-        next;
-    }
+        # get path and trim whitespace
+        my $path = $lib->prop('Path');
+        $path =~ s/^\s+|\s+$//;
 
-    # build absoulte path (consider File::Spec)
-    $path =~ s{(?=^[^/])}{$libraries_dir/};
-
-    # check if path exists
-    if (-d $path) {
-        # check if writable by calibre user
-        # system("TERM=dumb runuser -s /bin/bash calibre -c \"/usr/bin/test -w $path\"");
-        if (system("TERM=dumb runuser -s /bin/bash calibre -c \"[ -w $path ]\"") != 0 ) {
-            warn("[NOTICE] User: calibre; No write access to '$path'\n");
+        if ( ! $path) {
+            warn("[NOTICE] $lib->key — library invalid path\n");
             next;
         }
 
-        # create as new library
-        if ( ! -e $path . '/metadata.db') {
-            system('/usr/bin/systemctl stop calibre'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
-            my $exit_code = system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path'"));
-            system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));
-            if ($exit_code != 0) {warn("[NOTICE] $lib->key library creation failed\n");}
+        # validate: use of restricted characters
+        if ($path =~ m/$pattern/) {
+            warn("[NOTICE] $lib->key library — invalid path: '$path'\n");
+            next;
         }
 
-    }
-    else {
-        if ($path =~ m/^$libraries_dir/) {
+        # build absoulte path (consider File::Spec)
+        $path =~ s{(?=^[^/])}{$libraries_dir/};
+
+        # check if path exists
+        if (-d $path) {
+            # check if writable by calibre user
+            # system("TERM=dumb runuser -s /bin/bash calibre -c \"/usr/bin/test -w $path\"");
+            if (system("TERM=dumb runuser -s /bin/bash calibre -c \"[ -w $path ]\"") != 0 ) {
+                warn("[NOTICE] User: calibre; No write access to '$path'\n");
+                next;
+            }
+
             # create as new library
-            system('/usr/bin/systemctl stop calibre'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
-            my $exit_code = system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path'"));
-            system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));
-            if ($exit_code != 0) {warn("[NOTICE] $lib->key library creation failed\n");}
+            if ( ! -e $path . '/metadata.db') {
+                system('/usr/bin/systemctl stop calibre'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
+                my $exit_code = system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path'"));
+                system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));
+                if ($exit_code != 0) {warn("[NOTICE] $lib->key library creation failed\n");}
+            }
+
         }
         else {
-            warn("[NOTICE] $lib->key library '$path' does not exist\n");
+            if ($path =~ m/^$libraries_dir/) {
+                # create as new library
+                system('/usr/bin/systemctl stop calibre'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
+                my $exit_code = system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path'"));
+                system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));
+                if ($exit_code != 0) {warn("[NOTICE] $lib->key library creation failed\n");}
+            }
+            else {
+                warn("[NOTICE] $lib->key library '$path' does not exist\n");
+            }
+        }
+
+        # validated data
+        if (-e $path . '/metadata.db') {
+            push @libraries, $path;
         }
     }
-
-    # validated data
-    if (-e $path . '/metadata.db') {
-        push @libraries, $path;
-    }
 }
-
 
 if ($event eq 'nethserver-calibre-update') {
     # create 'calibre' system user
