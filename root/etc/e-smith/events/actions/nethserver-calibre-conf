@@ -24,7 +24,7 @@ my @libraries;
 foreach my $lib ($caldb->get_all_by_prop('type' => 'library')) {
 
     # get path and trim whitespace
-    if ( ! my $path = $lib->prop('Path') =~ s/^\s+|\s+$//) {
+    if ( ! my $path = ($lib->prop('Path') =~ s/^\s+|\s+$//)) {
         warn("[NOTICE] $lib->key — library invalid path\n");
         next;
     }
@@ -52,7 +52,7 @@ foreach my $lib ($caldb->get_all_by_prop('type' => 'library')) {
             system('/usr/bin/systemctl stop calibre'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
             my $exit_code = system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path'"));
             system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));
-            if ($exit_code != 0) warn("[NOTICE] $lib->key library creation failed\n");
+            if ($exit_code != 0) {warn("[NOTICE] $lib->key library creation failed\n");}
         }
 
     }
@@ -62,7 +62,7 @@ foreach my $lib ($caldb->get_all_by_prop('type' => 'library')) {
             system('/usr/bin/systemctl stop calibre'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
             my $exit_code = system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path'"));
             system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));
-            if ($exit_code != 0) warn("[NOTICE] $lib->key library creation failed\n");
+            if ($exit_code != 0) {warn("[NOTICE] $lib->key library creation failed\n");}
         }
         else {
             warn("[NOTICE] $lib->key library '$path' does not exist\n");
@@ -106,7 +106,7 @@ if ( ! @libraries) {
     if ( ! -e $default_library.'/metadata.db') {
         system('/usr/bin/systemctl stop calibre');
         $exit_code = system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library ' . $default_library . '"');
-        if ($exit_code != 0) die("[ERROR] default library creation failed\n");
+        if ($exit_code != 0) {die("[ERROR] default library creation failed\n");}
         system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library ' . $default_library . '"');
     }
     # $cdb->set_prop('calibre', 'Libraries', $default_library);

@@ -1,7 +1,7 @@
 {
     use esmith::DB::db;
 
-    my $db = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db");
+    my $caldb   = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db");
     my $options = '';
 
     # get values from db
@@ -22,7 +22,7 @@
     foreach my $lib ($caldb->get_all_by_prop('type' => 'library')) {
 
         # get path and trim whitespace
-        if ( ! my $path = $lib->prop('Path') =~ s/^\s+|\s+$//) {
+        if ( ! my $path = ($lib->prop('Path') =~ s/^\s+|\s+$//)) {
             warn("[NOTICE] $lib->key — library invalid path\n");
             next;
         }
