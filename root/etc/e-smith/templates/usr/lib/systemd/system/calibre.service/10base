@@ -49,7 +49,7 @@
             push @libraries, $path;
         }
     }
-    if ( ! @libraries) {die("[ERROR] No libraries.");}
+    if ( ! @libraries) {die("[ERROR] No libraries.");} # [TODO] template expansion is done before conf is able to create libraries !!!
 
     ## Options: see https://manual.calibre-ebook.com/generated/en/calibre-server.html
 

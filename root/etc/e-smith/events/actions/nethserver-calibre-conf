@@ -32,7 +32,8 @@ if ($event eq 'nethserver-calibre-update') {
         chmod => 0755,
         group => 'calibre',
         owner => 'calibre',
-    }) || die("[ERROR] Failed to create calibre data paths");
+    }) || die("[ERROR] Failed to create calibre data paths.");
+    warn("[INFO] Calibre data paths created.\n");
 
     # install calibre
     if ( ! -d '/opt/calibre') { # consider checking exec instead (if dir created from spec %files)
@@ -40,7 +41,7 @@ if ($event eq 'nethserver-calibre-update') {
         # WARNING: what about redirections (404) and connections problems?
         # system('sudo -v && wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sudo sh /dev/stdin install_dir=/opt');
         system('wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin install_dir=/opt');
-        if ($? != 0) {die("[ERROR] Calibre installation failed");}
+        if ($? != 0) {die("[ERROR] Calibre installation failed.");}
     }
 }
 
@@ -134,6 +135,10 @@ if ( ! @libraries) {
         }
     }
 }
+
+# force calibre.service template expansion (otherwise template expansion happens before library creation !!!)
+system("/sbin/e-smith/expand-template /usr/lib/systemd/system/calibre.service");
+
 
 # create calibre db users
 
