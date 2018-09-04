@@ -10,7 +10,7 @@ $event = 'nethserver-calibre-update';
 
 event_actions($event, qw(
   initialize-default-databases 00
-  nethserver-calibre-conf 20
+  nethserver-calibre-conf 04
 ));
 
 event_templates($event, qw(
@@ -30,7 +30,7 @@ event_services($event, qw(
 $event = 'nethserver-calibre-save';
 
 event_actions($event, qw(
-  nethserver-calibre-conf 20
+  nethserver-calibre-conf 04
 ));
 
 event_templates($event, qw(

@@ -1,7 +1,7 @@
 {
     use esmith::DB::db;
 
-    my $caldb   = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db");
+    my $caldb   = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db.");
     my $options = '';
 
     # get values from db
@@ -9,11 +9,10 @@
     my $auth_mode       = $calibre{'AuthMode'} || '';
     my $ban_after       = $calibre{'BanAfter'} || '';
     my $ban_for         = $calibre{'BanFor'} || '';
-    # my @libraries       = split(/;/, ($calibre{'Libraries'} || '/var/lib/nethserver/calibre/libraries/Books'));
     my $num_per_page    = $calibre{'NumPerPage'} || '';
     my $opds_items      = $calibre{'MaxOPDSItems'} || '';
     my $opds_ung_items  = $calibre{'MaxOPDSUngroupedItems'} || '';
-    my $port            = $calibre{'TCPPort'} || '8008';    # http-alt: 8008, unassigned: 8084, 8085, 8089
+    my $port            = $calibre{'TCPPort'} || '8008';
     my $prefix          = $calibre{'URLPrefix'} || 'calibre';
     my $userdb          = $calibre{'UserDB'} || '/var/lib/nethserver/calibre/.config/calibre/server-users.sqlite';
     my $vhost           = $calibre{'VirtualHost'} || '';
@@ -27,17 +26,18 @@
     if ( ! @libs) {die("[ERROR] No libraries.");}
 
     foreach my $lib (@libs) {
+        
         # get path and trim whitespace
         $path = $lib->prop('Path');
         $path =~ s/^\s+|\s+$//;
         if ( ! $path) {
-            warn("[NOTICE] $lib->key — library invalid path\n");
+            warn("[NOTICE] '$lib->key' library path missing.\n");
             next;
         }
 
         # validate: use of restricted characters
         if ($path =~ m/$pattern/) {
-            warn("[NOTICE] $lib->key library — invalid path: '$path'\n");
+            warn("[NOTICE] '$lib->key' library has an invalid path: '$path'\n");
             next;
         }
 
@@ -81,7 +81,8 @@
 
     # Libraries of books
     foreach (@libraries) {
-        $options .= ' "' . $_ . '"';
+        #$options .= ' "' . $_ . '"';
+        $options .= " '$_'";
     }
 
     #

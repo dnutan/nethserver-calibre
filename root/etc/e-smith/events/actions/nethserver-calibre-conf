@@ -9,8 +9,8 @@ use esmith::event;
 use File::Path qw(make_path);
 
 my $event = shift || '';
-my $cdb   = esmith::ConfigDB->open() || die("Can't open configuration db");
-my $caldb = esmith::DB::db->open('calibre') || die("Can't open calibre db");
+my $cdb   = esmith::ConfigDB->open() || die("Can't open configuration db.");
+my $caldb = esmith::DB::db->open('calibre') || die("Can't open calibre db.");
 
 my $data_dir        = '/var/lib/nethserver/calibre';
 my $libraries_dir   = $data_dir . '/libraries';
@@ -21,8 +21,9 @@ my $status          = $cdb->get_prop('calibre', 'status') || 'disabled';
 
 
 if ($event eq 'nethserver-calibre-update') {
+
     # create 'calibre' system user
-    system("if ! getent passwd calibre >/dev/null; then useradd -r -U -s /sbin/nologin -d $data_dir -c 'Calibre User' calibre;fi");
+    system("if ! getent passwd calibre >/dev/null; then useradd -r -U -s /sbin/nologin -d $data_dir -c 'Calibre User' calibre; fi");
     if ($? == 0) {warn("[INFO] User 'calibre' created.\n")};
 
     # Create directories and set permissions
@@ -36,18 +37,15 @@ if ($event eq 'nethserver-calibre-update') {
     warn("[INFO] Calibre data paths created.\n");
 
     # install calibre
-    if ( ! -d '/opt/calibre') { # consider checking exec instead (if dir created from spec %files)
+    if ( ! -e '/opt/calibre/calibre-server') {
         # SECURITY WARNING: about to run a script without verifying code. Do we trust the source?
-        # WARNING: what about redirections (404) and connections problems?
-        # system('sudo -v && wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sudo sh /dev/stdin install_dir=/opt');
+        # WARNING: what about redirections and connections problems?
         system('wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin install_dir=/opt');
         if ($? != 0) {die("[ERROR] Calibre installation failed.");}
     }
 }
 
 
-
-#my @libraries      = split(/;/, ($cdb->get_prop('calibre', 'Libraries') || ''));
 my @libraries;
 my @libs = $caldb->get_all_by_prop('type' => 'library');
 
@@ -58,13 +56,13 @@ if (@libs) {
         $path =~ s/^\s+|\s+$//;
 
         if ( ! $path) {
-            warn("[NOTICE] $lib->key — library invalid path\n");
+            warn("[NOTICE] '$lib->key' library path missing.\n");
             next;
         }
 
         # validate: use of restricted characters
         if ($path =~ m/$pattern/) {
-            warn("[NOTICE] $lib->key library — invalid path: '$path'\n");
+            warn("[NOTICE] '$lib->key' library has an invalid path: '$path'.\n");
             next;
         }
 
@@ -75,25 +73,24 @@ if (@libs) {
         if (-d $path) {
             # check if writable by calibre user
             # system("TERM=dumb runuser -s /bin/bash calibre -c \"/usr/bin/test -w $path\"");
-            if (system("TERM=dumb runuser -s /bin/bash calibre -c \"[ -w $path ]\"") != 0 ) {
-                warn("[NOTICE] User: calibre; No write access to '$path'\n");
+            if (system("TERM=dumb runuser -s /bin/bash calibre -c \"[ -w $path ]\"") != 0) {
+                warn("[NOTICE] User: calibre; No write access to '$path'.\n");
                 next;
             }
 
             # create as new library
             if ( ! -e $path . '/metadata.db') {
-                system('/usr/bin/systemctl stop calibre'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
-                system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path'"));
-                if ($? != 0) {warn("[NOTICE] $lib->key library creation failed\n");}
+                system('if /usr/bin/systemctl --is-active --quiet calibre.service; then /usr/bin/systemctl stop calibre; fi'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
+                system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path' >/dev/null"));
+                if ($? != 0) {warn("[NOTICE] '$lib->key' library creation failed.\n");}
                 system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));
             }
-
         }
         else {
             if ($path =~ m/^$libraries_dir/) {
                 # create as new library
                 system('/usr/bin/systemctl stop calibre'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
-                system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path'"));
+                system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path' >/dev/null"));
                 if ($? != 0) {warn("[NOTICE] $lib->key library creation failed\n");}
                 system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));                
             }
@@ -114,11 +111,10 @@ if (@libs) {
 if ( ! @libraries) {
     if ( ! -e $default_library.'/metadata.db') {
         system('/usr/bin/systemctl stop calibre');
-        system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library ' . $default_library . '"');
-        if ($? != 0) {die("[ERROR] default library creation failed\n");}
-        system('TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library ' . $default_library . '"');
+        system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$default_library' >/dev/null"));
+        if ($? != 0) {die("[ERROR] default library creation failed.");}
+        system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$default_library'"));
     }
-    # $cdb->set_prop('calibre', 'Libraries', $default_library);
     $caldb->set_prop('default', 'library', 'Path', $default_library);
 
     # modify global.py preferences file
@@ -137,13 +133,13 @@ if ( ! @libraries) {
 }
 
 # force calibre.service template expansion (otherwise template expansion happens before library creation !!!)
-system("/sbin/e-smith/expand-template /usr/lib/systemd/system/calibre.service");
-if ($? == 0){
-    warn("[INFO] expand-tempalte calibre.service succeded.\n");
-}
-else {
-    warn("[NOTICE] expand-tempalte calibre.service failed.\n");
-}
+# system("/sbin/e-smith/expand-template /usr/lib/systemd/system/calibre.service");
+# if ($? == 0) {
+#    warn("[INFO] expand-template calibre.service succeded.\n");
+# }
+# else {
+#    warn("[NOTICE] expand-template calibre.service failed.\n");
+# }
 
 
 # create calibre db users
