@@ -49,7 +49,7 @@ if ($event eq 'nethserver-calibre-update') {
 
 
 # stop calibre service
-system('if /usr/bin/systemctl --is-active --quiet calibre.service; then /usr/bin/systemctl stop calibre; fi');
+system('if /usr/bin/systemctl is-active --quiet calibre.service; then /usr/bin/systemctl stop calibre; fi');
 
 # process libraries
 my @libs = $caldb->get_all_by_prop('type' => 'library');

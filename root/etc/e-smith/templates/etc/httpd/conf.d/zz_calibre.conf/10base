@@ -1,4 +1,8 @@
 {
+    my $port    = $calibre{'TCPPort'} || 8008;
+    my $prefix  = $calibre{'URLPrefix'} || 'calibre';
+    my $vhost   = $calibre{'VirtualHost'} || '';
+
     if ($vhost ne '') {
         $OUT = qq(
             <VirtualHost *:80>
@@ -37,17 +41,17 @@
             </VirtualHost>
         );
     } 
-    elsif ($prefix ne '') {
-        # [TODO] code for reverse proxy to sub-path (NOT WORKING)
+    else {
         $OUT = qq(
         AllowEncodedSlashes NoDecode
+        # ProxyRequests Off
         <Location "/$prefix">
-            RedirectMatch permanent ^/$prefix\$ /$prefix/
+            # RedirectMatch permanent ^/$prefix\$ /$prefix/
             # ProxyPreserveHost On
-            ProxyPass "http://127.0.0.1:$port/$prefix/"
-            ProxyPassReverse "http://127.0.0.1:$port/$prefix/"
-            SetEnv force-proxy-request-1.0 1
-            SetEnv proxy-nokeepalive 1
+            ProxyPass "http://127.0.0.1:$port"
+            ProxyPassReverse "http://127.0.0.1:$port"
+            # SetEnv force-proxy-request-1.0 1
+            # SetEnv proxy-nokeepalive 1
         </Location>
         );
     }

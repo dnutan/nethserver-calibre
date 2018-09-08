@@ -1,5 +1,5 @@
 Name: nethserver-calibre
-Version: 0.0.3
+Version: 0.0.4
 Release: 1%{?dist}
 Summary: NethServer Calibre Content Server configuration
 
@@ -53,6 +53,11 @@ cat %{name}-%{version}-filelist
 %dir %{_nseventsdir}/%{name}-update
 
 %changelog
+* Sat Sep 08 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.4-1.ns7
+- conf.d/zz_calibre.conf: unfragment template
+- conf.d/zz_calibre.conf: fix virtual host to subpath
+- default-virtualhost.inc/40calibre: redirect subpath
+
 * Sat Sep 08 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.3-1.ns7
 - actions/nethserver-calibre-conf: reduce code to handle libraries
 - zz_calibre.conf: fragment template

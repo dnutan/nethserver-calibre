@@ -1,0 +1,19 @@
+{
+    my $prefix  = $calibre{'URLPrefix'} || 'calibre';
+    my $vhost   = $calibre{'VirtualHost'} || '';
+
+    if ( ! $vhost) {
+        $OUT = qq(
+#
+# 40calibre
+#
+<Location "/$prefix">
+    RedirectMatch permanent ^/$prefix\$ /$prefix/
+</Location>
+
+RewriteEngine On
+RewriteCond %\{HTTPS\} !=on
+RewriteRule ^/$prefix(/.*)?\$  https://%\{HTTP_HOST\}/$prefix\$1  [L,R=301]
+        );
+    }
+}
