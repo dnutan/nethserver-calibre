@@ -18,6 +18,7 @@ my $default_library = $libraries_dir . '/Books';
 my $global_pref     = $data_dir . '/.config/calibre/global.py';
 my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
 my $status          = $cdb->get_prop('calibre', 'status') || 'disabled';
+my @libraries;
 
 
 if ($event eq 'nethserver-calibre-update') {
@@ -26,7 +27,7 @@ if ($event eq 'nethserver-calibre-update') {
     system("if ! getent passwd calibre >/dev/null; then useradd -r -U -s /sbin/nologin -d $data_dir -c 'Calibre User' calibre; fi");
     if ($? == 0) {warn("[INFO] User 'calibre' created.\n")};
 
-    # Create directories and set permissions
+    # create directories and set permissions
     make_path(  "$data_dir/.config/calibre", 
                 "$libraries_dir", 
                 "/var/log/calibre", {
@@ -34,21 +35,24 @@ if ($event eq 'nethserver-calibre-update') {
         group => 'calibre',
         owner => 'calibre',
     }) || die("[ERROR] Failed to create calibre data paths.");
-    warn("[INFO] Calibre data paths created.\n");
+    warn("[INFO] Calibre data paths created.\n") if ($?);
 
     # install calibre
     if ( ! -e '/opt/calibre/calibre-server') {
-        # SECURITY WARNING: about to run a script without verifying code. Do we trust the source?
+        # SECURITY WARNING: about to run a script without verifying its code. Do we trust the source?
         # WARNING: what about redirections and connections problems?
         system('wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin install_dir=/opt');
         if ($? != 0) {die("[ERROR] Calibre installation failed.");}
     }
+
 }
 
 
-my @libraries;
-my @libs = $caldb->get_all_by_prop('type' => 'library');
+# stop calibre service
+system('if /usr/bin/systemctl --is-active --quiet calibre.service; then /usr/bin/systemctl stop calibre; fi');
 
+# process libraries
+my @libs = $caldb->get_all_by_prop('type' => 'library');
 if (@libs) {
     foreach my $lib (@libs) {
         # get path and trim whitespace
@@ -69,34 +73,29 @@ if (@libs) {
         # build absoulte path (consider File::Spec)
         $path =~ s{(?=^[^/])}{$libraries_dir/};
 
-        # check if path exists
-        if (-d $path) {
+        # check if under default libraries path
+        if ($path !~ m/^$libraries_dir/) {
+            if ( ! -d $path) {
+                warn("[NOTICE] '$lib->key' library path does not exists: '$path'.\n");
+                next;
+            }
+            
             # check if writable by calibre user
             # system("TERM=dumb runuser -s /bin/bash calibre -c \"/usr/bin/test -w $path\"");
             if (system("TERM=dumb runuser -s /bin/bash calibre -c \"[ -w $path ]\"") != 0) {
-                warn("[NOTICE] User: calibre; No write access to '$path'.\n");
+                warn("[NOTICE] 'calibre' system user has no write access to '$path'.\n");
                 next;
             }
-
-            # create as new library
-            if ( ! -e $path . '/metadata.db') {
-                system('if /usr/bin/systemctl --is-active --quiet calibre.service; then /usr/bin/systemctl stop calibre; fi'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
-                system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path' >/dev/null"));
-                if ($? != 0) {warn("[NOTICE] '$lib->key' library creation failed.\n");}
-                system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));
-            }
         }
-        else {
-            if ($path =~ m/^$libraries_dir/) {
-                # create as new library
-                system('/usr/bin/systemctl stop calibre'); # Remember to take it outside the loop or check status to avoid unnecessary repetition !!!
-                system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path' >/dev/null"));
-                if ($? != 0) {warn("[NOTICE] $lib->key library creation failed\n");}
-                system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));                
+
+        # create new library
+        if ( ! -e $path . '/metadata.db') {
+            system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$path' > /dev/null"));
+            if ($? != 0) {
+                warn("[NOTICE] '$lib->key' library creation failed.\n");
+                next;
             }
-            else {
-                warn("[NOTICE] $lib->key library '$path' does not exist\n");
-            }
+            system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$path'"));
         }
 
         # validated data
@@ -110,7 +109,6 @@ if (@libs) {
 # create default library
 if ( ! @libraries) {
     if ( ! -e $default_library.'/metadata.db') {
-        system('/usr/bin/systemctl stop calibre');
         system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --empty --with-library '$default_library' >/dev/null"));
         if ($? != 0) {die("[ERROR] default library creation failed.");}
         system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb remove --permanent 1 --with-library '$default_library'"));

@@ -1,5 +1,5 @@
 Name: nethserver-calibre
-Version: 0.0.2
+Version: 0.0.3
 Release: 1%{?dist}
 Summary: NethServer Calibre Content Server configuration
 
@@ -53,6 +53,10 @@ cat %{name}-%{version}-filelist
 %dir %{_nseventsdir}/%{name}-update
 
 %changelog
+* Sat Sep 08 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.3-1.ns7
+- actions/nethserver-calibre-conf: reduce code to handle libraries
+- zz_calibre.conf: fragment template
+
 * Sun Sep 01 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.2-1.ns7
 - split db
 - refactor handling of calibre libraries

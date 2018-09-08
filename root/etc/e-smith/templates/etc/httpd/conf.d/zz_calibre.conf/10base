@@ -1,9 +1,4 @@
 {
-    my $port    = $calibre{'TCPPort'} || 8008;
-    my $prefix  = $calibre{'URLPrefix'} || '';
-    my $vhost   = $calibre{'VirtualHost'} || '';
-    
-
     if ($vhost ne '') {
         $OUT = qq(
             <VirtualHost *:80>

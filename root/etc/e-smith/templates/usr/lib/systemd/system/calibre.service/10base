@@ -14,22 +14,23 @@
     my $opds_ung_items  = $calibre{'MaxOPDSUngroupedItems'} || '';
     my $port            = $calibre{'TCPPort'} || '8008';
     my $prefix          = $calibre{'URLPrefix'} || 'calibre';
-    my $userdb          = $calibre{'UserDB'} || '/var/lib/nethserver/calibre/.config/calibre/server-users.sqlite';
-    my $vhost           = $calibre{'VirtualHost'} || '';
-    my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
     my $data_dir        = '/var/lib/nethserver/calibre';
     my $libraries_dir   = $data_dir . '/libraries';
     my $default_library = $libraries_dir . '/Books';
-
+    my $userdb          = $calibre{'UserDB'} || "$data_dir/.config/calibre/server-users.sqlite";
+    my $vhost           = $calibre{'VirtualHost'} || '';
+    my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
     my @libraries;
+
+
+    # process libraries
     my @libs = $caldb->get_all_by_prop('type' => 'library');
     if ( ! @libs) {die("[ERROR] No libraries.");}
-
     foreach my $lib (@libs) {
-        
         # get path and trim whitespace
         $path = $lib->prop('Path');
         $path =~ s/^\s+|\s+$//;
+
         if ( ! $path) {
             warn("[NOTICE] '$lib->key' library path missing.\n");
             next;
@@ -49,7 +50,8 @@
             push @libraries, $path;
         }
     }
-    if ( ! @libraries) {die("[ERROR] No libraries.");} # [TODO] template expansion is done before conf is able to create libraries !!!
+    if ( ! @libraries) {die("[ERROR] No libraries.");}
+
 
     ## Options: see https://manual.calibre-ebook.com/generated/en/calibre-server.html
 
