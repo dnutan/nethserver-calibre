@@ -36,9 +36,24 @@ class Calibre extends \Nethgui\Module\AbstractModule implements \NethServer\Modu
     public function getInfo() 
     {
     	# [TODO]
-         $host = $this->getPlatform()->getDatabase('configuration')->getProp('calibre', 'VirtualHost');
-         return array(
-            'url' => "https://".$host
-         );
+        $vhost = $this->getPlatform()->getDatabase('configuration')->getProp('calibre', 'VirtualHost');
+        if ( ! empty($vhost) ) {
+            return array(
+                'url' => "https://".$vhost
+            );
+        }
+        else {
+            $prefix = $this->getPlatform()->getDatabase('configuration')->getProp('calibre', 'URLPrefix');
+            if ( empty($prefix) ) {
+                $prefix = 'calibre';
+            }
+            $host = explode(':',$_SERVER['HTTP_HOST']);
+            return array(
+                'url' => "https://".$host[0]."/".$prefix
+            );            
+        }
+
+
+
     } 
 }
