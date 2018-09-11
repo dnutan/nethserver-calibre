@@ -1,6 +1,6 @@
 Name: nethserver-calibre
 Version: 0.0.5
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: NethServer Calibre Content Server configuration
 
 License: GPLv3
@@ -10,7 +10,9 @@ Source: %{name}-%{version}.tar.gz
 BuildRequires: nethserver-devtools
 Requires: perl
 Requires: python2
-Requires: nethserver-httpd wget
+Requires: nethserver-httpd
+Requires: nethserver-samba
+Requires: wget
 
 BuildArch: noarch
 
@@ -53,6 +55,13 @@ cat %{name}-%{version}-filelist
 %dir %{_nseventsdir}/%{name}-update
 
 %changelog
+* Tue Sep 11 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.5-2.ns7
+- actions/nethserver-calibre-smb-conf: add calibre smb share
+- smb.conf/75calibre-samba: add calibre smb share
+- createlinks: add calibre smb share
+- spec: require nethserver-samba
+
+
 * Sat Sep 08 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.5-1.ns7
 - Applications/Calibre.php: Dashboard links
 

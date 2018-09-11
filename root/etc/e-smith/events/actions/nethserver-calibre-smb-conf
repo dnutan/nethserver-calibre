@@ -1,0 +1,81 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use esmith::ConfigDB;
+use esmith::DB::db;
+use esmith::event;
+use File::Path qw(make_path);
+
+
+my $caldb = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db.");
+my $db    = esmith::ConfigDB->open() || die("Can't open configuration db.");
+my $event = shift || '';
+
+my $data_dir      = '/var/lib/nethserver/calibre';
+my $libraries_dir = $data_dir . '/libraries';
+my $pattern       = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
+my $status        = $db->get_prop('calibre', 'SmbStatus') || 'disabled';
+my $share_dir     = $db->get_prop('calibre', 'SmbShareDir') || $data_dir . '/share';
+my @libraries;
+my @share_dirs;
+
+if ($status ne 'enabled') {
+    warn("[INFO] Calibre samba shares are not enabled. Nothing to do.\n");
+    exit;
+}
+
+# check access to share_dir
+if ($share_dir !~ m/^$data_dir/) {
+    if ( ! -d $share_dir) {
+        die("[ERROR] SmbShareDir='$share_dir' does not exists.");
+    }
+    if (system("TERM=dumb runuser -s /bin/bash calibre -c \"[ -w $share_dir ]\"") != 0) {
+        die("[NOTICE] 'calibre' system user has no write access to SmbShareDir='$share_dir'.");
+    }
+}
+
+# process libraries (TODO: consider removing library checks; make paths directly from keys)
+my @libs = $caldb->get_all_by_prop('type' => 'library');
+if ( ! @libs) {die("[ERROR] No libraries.");}
+foreach my $lib (@libs) {    
+    # get path and trim whitespace
+    my $path = $lib->prop('Path');
+    $path =~ s/^\s+|\s+$//;
+
+    if ( ! $path) {
+        warn("[NOTICE] '$lib->key' library path missing.\n");
+        next;
+    }
+
+    # validate: use of restricted characters
+    if ($path =~ m/$pattern/) {
+        warn("[NOTICE] '$lib->key' library has an invalid path: '$path'\n");
+        next;
+    }
+
+    # build absoulte path (consider File::Spec)
+    $path =~ s{(?=^[^/])}{$libraries_dir/};
+
+    # check path
+    if (-e $path) {
+        # check if writable by calibre user
+        # system("TERM=dumb runuser -s /bin/bash calibre -c \"/usr/bin/test -w $path\"");
+        if (system("TERM=dumb runuser -s /bin/bash calibre -c \"[ -w $path ]\"") != 0) {
+            warn("[NOTICE] 'calibre' system user has no write access to '$path'.\n");
+            next;
+        }
+        push @libraries, $lib;
+        push @share_dirs, $share_dir . '/' . $lib->key;
+    }
+}
+if ( ! @libraries) {die("[ERROR] No libraries.");}
+
+# make dirs within the calibre share to auto add books to libraries
+make_path(@share_dirs, {
+      chmod => 0755,
+      group => 'calibre',
+      owner => 'calibre',
+}) || die("[ERROR] Failed to create calibre shares.");
+warn("[INFO] Calibre shares created.\n") if ($?);

@@ -35,7 +35,6 @@ class Calibre extends \Nethgui\Module\AbstractModule implements \NethServer\Modu
 
     public function getInfo() 
     {
-    	# [TODO]
         $vhost = $this->getPlatform()->getDatabase('configuration')->getProp('calibre', 'VirtualHost');
         if ( ! empty($vhost) ) {
             return array(
@@ -50,10 +49,8 @@ class Calibre extends \Nethgui\Module\AbstractModule implements \NethServer\Modu
             $host = explode(':',$_SERVER['HTTP_HOST']);
             return array(
                 'url' => "https://".$host[0]."/".$prefix
-            );            
+            );
         }
+    }
 
-
-
-    } 
 }

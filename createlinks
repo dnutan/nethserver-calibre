@@ -11,17 +11,21 @@ $event = 'nethserver-calibre-update';
 event_actions($event, qw(
   initialize-default-databases 00
   nethserver-calibre-conf 04
+  nethserver-calibre-smb-conf 04
 ));
 
 event_templates($event, qw(
   /etc/httpd/conf.d/default-virtualhost.inc
   /etc/httpd/conf.d/zz_calibre.conf
   /usr/lib/systemd/system/calibre.service
+  /etc/samba/smb.conf
 ));
 
 event_services($event, qw(
   httpd reload
   calibre restart
+  smb restart
+  nmb restart
 ));
 
 #--------------------------------------------------
@@ -32,17 +36,21 @@ $event = 'nethserver-calibre-save';
 
 event_actions($event, qw(
   nethserver-calibre-conf 04
+  nethserver-calibre-smb-conf 04
 ));
 
 event_templates($event, qw(
   /etc/httpd/conf.d/default-virtualhost.inc
   /etc/httpd/conf.d/zz_calibre.conf
   /usr/lib/systemd/system/calibre.service
+  /etc/samba/smb.conf
 ));
 
 event_services($event, qw(
   httpd reload
   calibre restart
+  smb restart
+  nmb restart
 ));
 
 #--------------------------------------------------

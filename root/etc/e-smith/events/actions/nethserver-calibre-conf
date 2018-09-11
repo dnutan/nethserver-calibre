@@ -17,7 +17,7 @@ my $libraries_dir   = $data_dir . '/libraries';
 my $default_library = $libraries_dir . '/Books';
 my $global_pref     = $data_dir . '/.config/calibre/global.py';
 my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
-my $status          = $cdb->get_prop('calibre', 'status') || 'disabled';
+my $status          = $cdb->get_prop('calibre', 'status') || 'enabled';
 my @libraries;
 
 
@@ -48,8 +48,8 @@ if ($event eq 'nethserver-calibre-update') {
 }
 
 
-# stop calibre service
-system('if /usr/bin/systemctl is-active --quiet calibre.service; then /usr/bin/systemctl stop calibre; fi');
+# stop calibre service (required to add libraries)
+system('if /usr/bin/systemctl is-active --quiet calibre.service; then /usr/bin/systemctl stop calibre.service; fi');
 
 # process libraries
 my @libs = $caldb->get_all_by_prop('type' => 'library');
@@ -115,7 +115,7 @@ if ( ! @libraries) {
     }
     $caldb->set_prop('default', 'library', 'Path', $default_library);
 
-    # modify global.py preferences file
+    # modify global.py preferences file (TODO: consider removing this, as no real effect detected on server side)
     if (-f $global_pref) {
         local($^I, @ARGV) = ('.bak', $global_pref);
         while (<>) {

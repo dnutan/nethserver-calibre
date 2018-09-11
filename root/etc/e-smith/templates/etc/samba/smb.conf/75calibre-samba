@@ -1,0 +1,58 @@
+{
+    use NethServer::SSSD;
+    use NethServer::Validation;
+    
+    our $sssd = new NethServer::SSSD();
+
+    my $data_dir   = '/var/lib/nethserver/calibre';
+    my $recycle    = $calibre{'SmbRecycleBin'} || 'enabled';
+    my $share_dir  = $calibre{'SmbShareDir'} || $data_dir . '/share';
+    my $share_name = $calibre{'SmbShareName'} || 'calibre';
+    my $status     = $calibre{'SmbStatus'} || 'disabled';
+    my $smb_users  = "admin admin\@$DomainName ";
+    my $exitcode;
+
+    return "    # Calibre Samba Share is disabled in smb.conf" unless ($status eq 'enabled');
+
+    $exitcode = NethServer::Validation::validate('ibay-create', $share_name);
+    die("[ERROR] invalid Calibre SmbShareName.") unless $exitcode;
+
+    $OUT .= qq(
+    #
+    # 75calibre-samba - Calibre Samba Share
+    #
+    [$share_name]
+    comment = Calibre Queue - Auto Add Books to Calibre Libraries
+    path = $share_dir
+    );
+    
+    if ($sssd->isAD()) {
+        # [TODO] consider username (format) validation; redundant split & join?
+        $smb_users .= join(' ', split(/\s+/, ($calibre{'SmbUsers'} || '')));
+        $OUT .= "    valid users =  $smb_users\n";
+    }
+
+    $OUT .=  qq(
+    force user = calibre
+    force group = calibre
+    read only = no
+    browseable = yes
+    writeable = yes
+    create mode = 0644
+    directory mask = 0755
+    );
+
+    if ($recycle eq 'enabled') {
+        $OUT .= qq(
+
+    vfs objects = full_audit recycle
+      recycle: exclude_dir = /tmp,/temp,/cache
+      recycle: repository = Recycle Bin
+      recycle: versions = True
+      recycle: keeptree = True
+      recycle: touch = True
+      recycle: directory_mode = 0770
+      recycle: exclude = *.tmp,*.temp,*.o,*.obj,~\$*
+        );
+    }
+}

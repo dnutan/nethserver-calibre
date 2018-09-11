@@ -28,7 +28,7 @@
     if ( ! @libs) {die("[ERROR] No libraries.");}
     foreach my $lib (@libs) {
         # get path and trim whitespace
-        $path = $lib->prop('Path');
+        my $path = $lib->prop('Path');
         $path =~ s/^\s+|\s+$//;
 
         if ( ! $path) {
