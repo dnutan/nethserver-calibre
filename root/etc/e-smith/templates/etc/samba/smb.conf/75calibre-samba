@@ -2,7 +2,7 @@
     use NethServer::SSSD;
     use NethServer::Validation;
     
-    our $sssd = new NethServer::SSSD();
+    my $sssd = new NethServer::SSSD();
 
     my $data_dir   = '/var/lib/nethserver/calibre';
     my $recycle    = $calibre{'SmbRecycleBin'} || 'enabled';

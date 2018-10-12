@@ -1,0 +1,75 @@
+{
+
+    use esmith::DB::db;
+
+    my $caldb = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db.");
+
+    my $auth            = $calibre{'Auth'} || 'disabled';
+    my $data_dir        = '/var/lib/nethserver/calibre';
+    my $libraries_dir   = $data_dir . '/libraries';
+    my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
+    my $port            = $calibre{'TCPPort'} || '8008';
+    my $recycle         = $calibre{'SmbRecycleBin'} || 'enabled';
+    my $share_dir       = $calibre{'SmbShareDir'} || $data_dir . '/share';
+    my $status          = $calibre{'SmbStatus'} || 'disabled';
+    my @libraries;
+    my $command = "if /usr/bin/systemctl is-active --quiet calibre.service; then /usr/bin/systemctl stop calibre.service; fi; ";
+    $command .= qq(TERM=dumb runuser -s /bin/bash calibre -c ");
+
+    $OUT .= "#\n# 10base\n#\n";
+    return "# No schedule. Calibre Samba Share is not enabled." unless ($status eq 'enabled');
+
+    # process libraries
+    my @libs = $caldb->get_all_by_prop('type' => 'library');
+    if ( ! @libs) {die("[ERROR] No libraries.");}
+    foreach my $lib (@libs) {
+        my $source = $share_dir . '/' . $lib->key;
+        
+        # get path and trim whitespace
+        my $target = $lib->prop('Path');
+        $target =~ s/^\s+|\s+$//;
+
+        if ( ! $target) {
+            warn("[NOTICE] '$lib->key' library path missing.\n");
+            next;
+        }
+
+        # validate: use of restricted characters
+        if ($target =~ m/$pattern/) {
+            warn("[NOTICE] '$lib->key' library has an invalid path: '$target'\n");
+            next;
+        }
+
+        # build absoulte path (consider File::Spec)
+        $target =~ s{(?=^[^/])}{$libraries_dir/};
+    
+        # compose command
+        $command .= qq(/usr/bin/calibredb add --recurse '$source' --with-library '$target' & );
+
+    }
+    $command .= qq("; /usr/bin/systemctl start calibre.service);
+
+    $OUT .=qq(*/15  *  *  *  * root $command);
+
+    # List libraries currently handled by calibre content server;
+    # listed in the same order as they were called from calibre-server command/service.
+    # calibredb add --with-library 'http://127.0.0.1:8008/#-'
+    # calibredb add --with-library 'http://127.0.0.1:8008/#-' --username '$user' --password '$password'
+    
+
+    # set schedule
+
+    # set job (build command)
+
+        # if Auth enabled then use authentication to add books while calibre server is running, mapping paths to calibre's internal library_ids (calibredb list <=> calibre.service ordered libraries)
+        # else stop calibre-server, add books, start calibre-server
+
+        # system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --recurse '$source' --with-library '$target' > /dev/null"));
+        # system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --recurse '$path' --with-library 'http://127.0.0.1:$port/#$library_id' --username '$user' --password '$password' > /dev/null"));
+
+        # verify book was added
+            # remove book
+
+}
+
+# calibredb add: To read the password from standard input, use the special value: <stdin>. To read the password from a file, use: <f:/path/to/file> (i.e. <f: followed by the full path to the file and a trailing >). The angle brackets in the above are required, remember to escape them or use quotes for your shell.

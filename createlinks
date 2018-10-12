@@ -19,6 +19,7 @@ event_templates($event, qw(
   /etc/httpd/conf.d/zz_calibre.conf
   /usr/lib/systemd/system/calibre.service
   /etc/samba/smb.conf
+  /etc/cron.d/calibre
 ));
 
 event_services($event, qw(
@@ -44,11 +45,31 @@ event_templates($event, qw(
   /etc/httpd/conf.d/zz_calibre.conf
   /usr/lib/systemd/system/calibre.service
   /etc/samba/smb.conf
+  /etc/cron.d/calibre
 ));
 
 event_services($event, qw(
   httpd reload
   calibre restart
+  smb restart
+  nmb restart
+));
+
+#--------------------------------------------------
+# Event nethserver-sssd-save
+#--------------------------------------------------
+
+$event = 'nethserver-sssd-save';
+
+event_actions($event, qw(
+  nethserver-calibre-smb-conf 04
+));
+
+event_templates($event, qw(
+  /etc/samba/smb.conf
+));
+
+event_services($event, qw(
   smb restart
   nmb restart
 ));

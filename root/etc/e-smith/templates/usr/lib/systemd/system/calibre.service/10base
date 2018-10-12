@@ -72,6 +72,9 @@
         if ($ban_after =~ m/^\d+$/) {$options .= " --ban-after=$ban_after";}
         if ($ban_for =~ m/^\d+$/)   {$options .= " --ban-for=$ban_for";}
     }
+    else {
+        $options .= " --enable-local-write";
+    }
 
     # Logs
     $options .= " --log=/var/log/calibre/calibre-server.log";

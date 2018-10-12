@@ -29,10 +29,10 @@ if ($status ne 'enabled') {
 # check access to share_dir
 if ($share_dir !~ m/^$data_dir/) {
     if ( ! -d $share_dir) {
-        die("[ERROR] SmbShareDir='$share_dir' does not exists.");
+        die("[ERROR] SmbShareDir '$share_dir' does not exists.");
     }
     if (system("TERM=dumb runuser -s /bin/bash calibre -c \"[ -w $share_dir ]\"") != 0) {
-        die("[NOTICE] 'calibre' system user has no write access to SmbShareDir='$share_dir'.");
+        die("[NOTICE] 'calibre' system user has no write access to SmbShareDir '$share_dir'.");
     }
 }
 
