@@ -29,7 +29,10 @@
     if ($sssd->isAD()) {
         # [TODO] consider username (format) validation; redundant split & join?
         $smb_users .= join(' ', split(/\s+/, ($calibre{'SmbUsers'} || '')));
-        $OUT .= "    valid users =  $smb_users\n";
+        $OUT .= "    valid users = $smb_users\n";
+    }
+    else {
+        $OUT .= "    guest ok = yes\n";
     }
 
     $OUT .=  qq(
