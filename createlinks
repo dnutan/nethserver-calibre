@@ -25,8 +25,7 @@ event_templates($event, qw(
 event_services($event, qw(
   httpd reload
   calibre restart
-  smb restart
-  nmb restart
+  smb reload
 ));
 
 #--------------------------------------------------
@@ -51,8 +50,7 @@ event_templates($event, qw(
 event_services($event, qw(
   httpd reload
   calibre restart
-  smb restart
-  nmb restart
+  smb reload
 ));
 
 #--------------------------------------------------
@@ -70,8 +68,7 @@ event_templates($event, qw(
 ));
 
 event_services($event, qw(
-  smb restart
-  nmb restart
+  smb reload
 ));
 
 #--------------------------------------------------

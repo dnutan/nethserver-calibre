@@ -13,7 +13,7 @@
     my $share_dir       = $calibre{'SmbShareDir'} || $data_dir . '/share';
     my $status          = $calibre{'SmbStatus'} || 'disabled';
     my @libraries;
-    my $command = "if /usr/bin/systemctl is-active --quiet calibre.service; then /usr/bin/systemctl stop calibre.service; fi; ";
+    my $command = "if /usr/bin/systemctl is-active --quiet calibre.service; then /usr/bin/systemctl stop calibre.service; fi;";
     $command .= qq(TERM=dumb runuser -s /bin/bash calibre -c ");
 
     $OUT .= "#\n# 10base\n#\n";
@@ -44,17 +44,18 @@
         $target =~ s{(?=^[^/])}{$libraries_dir/};
     
         # compose command
-        $command .= qq(/usr/bin/calibredb add --recurse '$source' --with-library '$target' & );
+        $command .= "/usr/bin/calibredb add --recurse '$source' --with-library '$target';";
 
     }
     $command .= qq("; /usr/bin/systemctl start calibre.service);
 
-    $OUT .=qq(*/15  *  *  *  * root $command);
+    # this is a test
+    $OUT .=qq(*/15  *  *  *  * root $command 2>&1);
 
     # List libraries currently handled by calibre content server;
     # listed in the same order as they were called from calibre-server command/service.
     # calibredb add --with-library 'http://127.0.0.1:8008/#-'
-    # calibredb add --with-library 'http://127.0.0.1:8008/#-' --username '$user' --password '$password'
+    # calibredb add --with-library 'http://127.0.0.1:8008/#-' --username '$user' --password '$password' # --password '</path/to/passfile>'
     
 
     # set schedule
@@ -71,5 +72,3 @@
             # remove book
 
 }
-
-# calibredb add: To read the password from standard input, use the special value: <stdin>. To read the password from a file, use: <f:/path/to/file> (i.e. <f: followed by the full path to the file and a trailing >). The angle brackets in the above are required, remember to escape them or use quotes for your shell.
