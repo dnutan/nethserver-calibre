@@ -1,0 +1,106 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use esmith::ConfigDB;
+use esmith::DB::db;
+use NethServer::Service;
+use File::Path qw(make_path);
+
+my $db      = esmith::ConfigDB->open() || die("Can't open configuration db");
+my $caldb   = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db.");
+my $service = NethServer::Service->new('calibre');
+
+my $auth            = $db->get_prop('calibre', 'Auth') || 'disabled';
+my $data_dir        = '/var/lib/nethserver/calibre';
+my $libraries_dir   = $data_dir . '/libraries';
+my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
+my $port            = $db->get_prop('calibre', 'TCPPort') || '8008';
+my $recycle         = $db->get_prop('calibre', 'SmbRecycleBinStatus') || 'enabled';
+my $share_dir       = $db->get_prop('calibre', 'SmbShareDir') || $data_dir . '/share';
+my $status          = $db->get_prop('calibre', 'SmbStatus') || 'disabled';
+# my %libraries;
+my $command;
+
+die("Nothing to do. Calibre samba is not enabled.") unless ($status eq 'enabled');
+
+if ( $service->is_running() ) {
+    # get IDs of active libraries (list in same order as called by calibre-server)
+    # calibredb add --with-library 'http://localhost:8008/#-'  # add and list, works the same
+    # calibredb add --with-library 'http://localhost:8008/#-' --username '$user' --password '$password' # --password '</path/to/passfile>'
+    my @runtime_lib_ids = split(' ', qx(/usr/bin/calibredb add --with-library 'http://localhost:$port/#-'));
+
+    # get paths of active libraries (parse from systemctl, ps or calibre unit file)
+    my @runtime_lib_paths = ( qx(/usr/bin/systemctl -p ExecStart show calibre) =~ /\s(\/[^\s;]+)/g );
+
+    my %runtime_libs;
+    @runtime_libs{@runtime_lib_paths} = @runtime_lib_ids;
+}
+
+# process libraries
+my @libs = $caldb->get_all_by_prop('type' => 'library');
+if ( ! @libs) {die("[ERROR] No libraries.");}
+foreach my $lib (@libs) {
+    my $source = $share_dir . '/' . $lib->key;
+    
+    # get path and trim whitespace
+    my $target = $lib->prop('Path');
+    $target =~ s/^\s+|\s+$//;
+
+    if ( ! $target) {
+        warn("[NOTICE] '$lib->key' library path missing.\n");
+        next;
+    }
+
+    # validate: use of restricted characters
+    if ($target =~ m/$pattern/) {
+        warn("[NOTICE] '$lib->key' library has an invalid path: '$target'\n");
+        next;
+    }
+
+    # build absoulte path (consider File::Spec)
+    $target =~ s{(?=^[^/])}{$libraries_dir/};
+
+    # fill hash of libraries
+    # $libraries{$lib->key} = {
+    #    runtime_id => $runtime_libs{$target},
+    #    smb_path   => $source,
+    #    lib_path   => $target,
+    # };
+
+    if (my $lib_id = $runtime_libs{$target}) {
+        $target = "http://localhost:$port/#$lib_id";
+    }
+
+    # add books
+    my $result = qx(/usr/bin/calibredb add --recurse '$source' --with-library '$target');
+
+    # get list of books in library
+    # calibredb list --with-library '$target' --fields title --sort-by timestamp --for-machine
+
+    # find out whether books are already in the library
+    # $result =~ $share_dir;
+    # $result =~ s/^\s+|\s+$//gm;
+    $result =~ s/.*($share_dir.+$)/$1/gm;
+    my @result = split('\n', $result);
+
+    # prepare recycle bin
+    make_path("$share_dir/Recycle Bin", {
+        chmod => 0770,
+        # group => 'calibre',
+        # owner => 'calibre',
+    }) || warn("[NOTICE] Failed to create Recycle Bin.");
+
+    # recycle/remove books from share
+    # - may leave empty dirs, full dirs structure not replicated on Recycle Bin
+    # - direct removal from filesystem does not follow samba's vfs_recycle rules
+    if ($recycle eq 'enabled') {
+        system('mv', '-t', "$share_dir/Recycle Bin", '--', @result); # runuser...
+    }
+    else {
+        # system('rm', '-f', '--', @result);
+        system('runuser', '-s', '/bin/bash', 'calibre', '-c', "rm -f -- @result");
+    }
+
+}
