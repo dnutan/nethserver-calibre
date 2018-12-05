@@ -1,23 +1,43 @@
 {
-
     use esmith::DB::db;
+    use NethServer::Service;
 
-    my $caldb = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db.");
+    my $caldb   = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db.");
+    my $service = NethServer::Service->new('calibre');
 
     my $auth            = $calibre{'Auth'} || 'disabled';
     my $data_dir        = '/var/lib/nethserver/calibre';
     my $libraries_dir   = $data_dir . '/libraries';
     my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
     my $port            = $calibre{'TCPPort'} || '8008';
-    my $recycle         = $calibre{'SmbRecycleBin'} || 'enabled';
+    my $recycle         = $calibre{'SmbRecycleBinStatus'} || 'enabled';
     my $share_dir       = $calibre{'SmbShareDir'} || $data_dir . '/share';
     my $status          = $calibre{'SmbStatus'} || 'disabled';
     my @libraries;
-    my $command = "if /usr/bin/systemctl is-active --quiet calibre.service; then /usr/bin/systemctl stop calibre.service; fi;";
-    $command .= qq(TERM=dumb runuser -s /bin/bash calibre -c ");
+    my $command;
 
     $OUT .= "#\n# 10base\n#\n";
     return "# No schedule. Calibre Samba Share is not enabled." unless ($status eq 'enabled');
+
+    if ( $service->is_running() ) {
+        # get IDs of active libraries (list in same order as called by calibre-server)
+        # calibredb add --with-library 'http://localhost:8008/#-'
+        # calibredb add --with-library 'http://localhost:8008/#-' --username '$user' --password '$password' # --password '</path/to/passfile>'
+        my @active_library_ids = split(' ', qx(/usr/bin/calibredb add --with-library 'http://localhost:$port/#-'));
+
+        # get paths of active libraries (parse from systemctl, ps or calibre unit file)
+        my @active_library_paths = ( qx(/usr/bin/systemctl -p ExecStart show calibre) =~ /\s(\/[^\s;]+)/g );
+    }
+
+
+    # offline libraries
+    $command = "if /usr/bin/systemctl is-active --quiet calibre; then /usr/bin/systemctl stop calibre; fi;";
+    $command .= qq(TERM=dumb runuser -s /bin/bash calibre -c ");
+
+    # online libraries (without auth)
+    # $command .= "/usr/bin/calibredb add --recurse '$source' --with-library '$target'"; # target = http://localhost:8008#library_id
+
+
 
     # process libraries
     my @libs = $caldb->get_all_by_prop('type' => 'library');
@@ -50,12 +70,9 @@
     $command .= qq("; /usr/bin/systemctl start calibre.service);
 
     # this is a test
-    $OUT .=qq(*/15  *  *  *  * root $command 2>&1);
+    # $OUT .=qq(*/15  *  *  *  * root $command 2>&1);
+    $OUT .=qq(*/15  *  *  *  * root /usr/libexec/nethserver/calibre-samba-import 2>&1);
 
-    # List libraries currently handled by calibre content server;
-    # listed in the same order as they were called from calibre-server command/service.
-    # calibredb add --with-library 'http://127.0.0.1:8008/#-'
-    # calibredb add --with-library 'http://127.0.0.1:8008/#-' --username '$user' --password '$password' # --password '</path/to/passfile>'
     
 
     # set schedule
@@ -63,10 +80,10 @@
     # set job (build command)
 
         # if Auth enabled then use authentication to add books while calibre server is running, mapping paths to calibre's internal library_ids (calibredb list <=> calibre.service ordered libraries)
-        # else stop calibre-server, add books, start calibre-server
+        # else determine if there are new files on the share, stop calibre-server, add books, start calibre-server
 
         # system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --recurse '$source' --with-library '$target' > /dev/null"));
-        # system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --recurse '$path' --with-library 'http://127.0.0.1:$port/#$library_id' --username '$user' --password '$password' > /dev/null"));
+        # system(qq(TERM=dumb runuser -s /bin/bash calibre -c "/usr/bin/calibredb add --recurse '$path' --with-library 'http://localhost:$port/#$library_id' --username '$user' --password '$password' > /dev/null"));
 
         # verify book was added
             # remove book

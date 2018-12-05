@@ -59,7 +59,7 @@
     if ($num_per_page =~ m/^\d+$/) { $options .= " --num-per-page=$num_per_page"; }
 
     # Connection
-    $options .= " --listen-on=127.0.0.1";
+    $options .= " --listen-on=localhost";
     $options .= " --port=$port";
     if ( ! $vhost && $prefix) {$options .= " --url-prefix=\"/$prefix\"";}
     # if ($timeout =~ m/^\d+$/) { $options .= " --timeout=$timeout"; }

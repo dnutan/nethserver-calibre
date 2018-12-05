@@ -5,7 +5,7 @@
     my $sssd = new NethServer::SSSD();
 
     my $data_dir   = '/var/lib/nethserver/calibre';
-    my $recycle    = $calibre{'SmbRecycleBin'} || 'enabled';
+    my $recycle    = $calibre{'SmbRecycleBinStatus'} || 'enabled';
     my $share_dir  = $calibre{'SmbShareDir'} || $data_dir . '/share';
     my $share_name = $calibre{'SmbShareName'} || 'calibre';
     my $status     = $calibre{'SmbStatus'} || 'disabled';
