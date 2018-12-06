@@ -20,10 +20,20 @@ my $port            = $db->get_prop('calibre', 'TCPPort') || '8008';
 my $recycle         = $db->get_prop('calibre', 'SmbRecycleBinStatus') || 'enabled';
 my $share_dir       = $db->get_prop('calibre', 'SmbShareDir') || $data_dir . '/share';
 my $status          = $db->get_prop('calibre', 'SmbStatus') || 'disabled';
-# my %libraries;
+my %runtime_libs;
 my $command;
 
 die("Nothing to do. Calibre samba is not enabled.") unless ($status eq 'enabled');
+
+# prepare recycle bin
+if ($recycle eq 'enabled') {
+    make_path("$share_dir/Recycle Bin", {
+        chmod => 0770,
+        group => 'calibre',
+        # owner => 'calibre',
+    });# || warn("[NOTICE] Failed to create Recycle Bin.");
+}
+
 
 if ( $service->is_running() ) {
     # get IDs of active libraries (list in same order as called by calibre-server)
@@ -34,7 +44,6 @@ if ( $service->is_running() ) {
     # get paths of active libraries (parse from systemctl, ps or calibre unit file)
     my @runtime_lib_paths = ( qx(/usr/bin/systemctl -p ExecStart show calibre) =~ /\s(\/[^\s;]+)/g );
 
-    my %runtime_libs;
     @runtime_libs{@runtime_lib_paths} = @runtime_lib_ids;
 }
 
@@ -82,25 +91,20 @@ foreach my $lib (@libs) {
     # find out whether books are already in the library
     # $result =~ $share_dir;
     # $result =~ s/^\s+|\s+$//gm;
-    $result =~ s/.*($share_dir.+$)/$1/gm;
-    my @result = split('\n', $result);
+    my @result = $result =~ /.*($share_dir.+$)/gm;
+    # my @result = split('\n', $result);
 
-    # prepare recycle bin
-    make_path("$share_dir/Recycle Bin", {
-        chmod => 0770,
-        # group => 'calibre',
-        # owner => 'calibre',
-    }) || warn("[NOTICE] Failed to create Recycle Bin.");
-
-    # recycle/remove books from share
-    # - may leave empty dirs, full dirs structure not replicated on Recycle Bin
-    # - direct removal from filesystem does not follow samba's vfs_recycle rules
-    if ($recycle eq 'enabled') {
-        system('mv', '-t', "$share_dir/Recycle Bin", '--', @result); # runuser...
+    if (@result) {
+        # recycle/remove books from share
+        # - may leave empty dirs, full dirs structure not replicated on Recycle Bin
+        # - direct removal from filesystem does not follow samba's vfs_recycle rules
+        if ($recycle eq 'enabled') {
+            #system('mv', '-t', "$share_dir/Recycle Bin", '--', @result);
+            system('runuser', '-s', '/bin/bash', 'calibre', '-c', "mv -t '$share_dir/Recycle Bin' -- @result");
+        }
+        else {
+            # system('rm', '-f', '--', @result);
+            system('runuser', '-s', '/bin/bash', 'calibre', '-c', "rm -f -- @result");
+        }
     }
-    else {
-        # system('rm', '-f', '--', @result);
-        system('runuser', '-s', '/bin/bash', 'calibre', '-c', "rm -f -- @result");
-    }
-
 }

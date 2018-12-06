@@ -1,6 +1,6 @@
 Name: nethserver-calibre
 Version: 0.0.5
-Release: 3%{?dist}
+Release: 4%{?dist}
 Summary: NethServer Calibre Content Server configuration
 
 License: GPLv3
@@ -37,7 +37,8 @@ perl createlinks
 (cd root; find . -depth -print | cpio -dump %{buildroot})
 # mkdir -p %{buildroot}/var/lib/nethserver/calibre/{.config/calibre,libraries}
 # mkdir -p %{buildroot}/var/log/calibre
-%{genfilelist} %{buildroot} >  %{name}-%{version}-filelist
+%{genfilelist} %{buildroot} \
+  --file /usr/libexec/nethserver/calibre-samba-import 'attr(0755,root,root)' >  %{name}-%{version}-filelist
 #%{genfilelist} %{buildroot} \
 #%{genfilelist} %{buildroot} \
 #  --dir /var/lib/nethserver/calibre \
@@ -55,6 +56,9 @@ cat %{name}-%{version}-filelist
 %dir %{_nseventsdir}/%{name}-update
 
 %changelog
+* Wed Dec 05 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.5-4.ns7
+- created calibre-samba-import script
+
 * Fri Oct 12 2018 @dnutan <dnutan+gh@mailbox.org> - 0.0.5-3.ns7
 - createlinks: subscribe nethserver-sssd-save event
 - cron.d/calibre: add cron job to import books
