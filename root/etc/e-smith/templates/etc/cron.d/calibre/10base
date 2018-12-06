@@ -5,16 +5,18 @@
     my $caldb   = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db.");
     my $service = NethServer::Service->new('calibre');
 
-    my $auth            = $calibre{'Auth'} || 'disabled';
+    my $auth            = $calibre{'AuthStatus'} || 'disabled';
     my $data_dir        = '/var/lib/nethserver/calibre';
     my $libraries_dir   = $data_dir . '/libraries';
     my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
     my $port            = $calibre{'TCPPort'} || '8008';
+    my $time            = $calibre{'SmbImportTime'} || '5:00';
     my $recycle         = $calibre{'SmbRecycleBinStatus'} || 'enabled';
     my $share_dir       = $calibre{'SmbShareDir'} || $data_dir . '/share';
     my $status          = $calibre{'SmbStatus'} || 'disabled';
     my @libraries;
     my $command;
+
 
     $OUT .= "#\n# 10base\n#\n";
     return "# No schedule. Calibre Samba Share is not enabled." unless ($status eq 'enabled');
@@ -71,7 +73,8 @@
 
     # this is a test
     # $OUT .=qq(*/15  *  *  *  * root $command 2>&1);
-    $OUT .=qq(*/15  *  *  *  * root /usr/libexec/nethserver/calibre-samba-import 2>&1);
+    # $OUT .=qq(*/15  *  *  *  * root /usr/libexec/nethserver/calibre-samba-import 2>&1);
+    cron($time);
 
     
 
@@ -87,5 +90,34 @@
 
         # verify book was added
             # remove book
+
+    # 
+    # cron subroutine
+    #
+    # configure calibre samba auto import schedule time from the configuration db
+    #
+    # Derived From: https://github.com/NethServer/nethserver-backup-data/blob/master/root/etc/e-smith/templates/etc/cron.d/backup-data/10base
+    #  - Original Author: Giacomo Sanchietti <giacomo.sanchietti@nethesis.it>
+    #  - License: GPLv3
+    #
+    sub cron {
+        my $time = shift;
+        my $name = shift || '';
+        my $min;
+        my $hour;
+        my $cron = '';
+        my $opt = '';
+
+        # remove leading zeros from minutes
+        if ($name eq '') {
+            ($hour, $min) = split(':', $time, -1);
+            $min =~ s/00/0/;
+            $cron .= "$min $hour * * *";
+        } else {
+            $cron .= $time;
+        }
+
+        $OUT .="$cron root /usr/libexec/nethserver/calibre-samba-import 2>&1\n";
+    }
 
 }

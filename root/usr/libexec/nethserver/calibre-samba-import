@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+# [TODO]
+#  - [BUG] What if user sets 'Recycle Bin' as a library or as a shared folder
+
 use strict;
 use warnings;
 
@@ -12,7 +15,7 @@ my $db      = esmith::ConfigDB->open() || die("Can't open configuration db");
 my $caldb   = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db.");
 my $service = NethServer::Service->new('calibre');
 
-my $auth            = $db->get_prop('calibre', 'Auth') || 'disabled';
+my $auth            = $db->get_prop('calibre', 'AuthStatus') || 'disabled';
 my $data_dir        = '/var/lib/nethserver/calibre';
 my $libraries_dir   = $data_dir . '/libraries';
 my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';
@@ -30,7 +33,7 @@ if ($recycle eq 'enabled') {
     make_path("$share_dir/Recycle Bin", {
         chmod => 0770,
         group => 'calibre',
-        # owner => 'calibre',
+        owner => 'calibre',
     });# || warn("[NOTICE] Failed to create Recycle Bin.");
 }
 
@@ -43,7 +46,6 @@ if ( $service->is_running() ) {
 
     # get paths of active libraries (parse from systemctl, ps or calibre unit file)
     my @runtime_lib_paths = ( qx(/usr/bin/systemctl -p ExecStart show calibre) =~ /\s(\/[^\s;]+)/g );
-
     @runtime_libs{@runtime_lib_paths} = @runtime_lib_ids;
 }
 
@@ -89,10 +91,7 @@ foreach my $lib (@libs) {
     # calibredb list --with-library '$target' --fields title --sort-by timestamp --for-machine
 
     # find out whether books are already in the library
-    # $result =~ $share_dir;
-    # $result =~ s/^\s+|\s+$//gm;
-    my @result = $result =~ /.*($share_dir.+$)/gm;
-    # my @result = split('\n', $result);
+    my @result = $result =~ /.*($source.\/+$)/gm;
 
     if (@result) {
         # recycle/remove books from share

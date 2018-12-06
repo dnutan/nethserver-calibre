@@ -5,7 +5,7 @@
     my $options = '';
 
     # get values from db
-    my $auth            = $calibre{'Auth'} || 'disabled';
+    my $auth            = $calibre{'AuthStatus'} || 'disabled';
     my $auth_mode       = $calibre{'AuthMode'} || '';
     my $ban_after       = $calibre{'BanAfter'} || '';
     my $ban_for         = $calibre{'BanFor'} || '';
