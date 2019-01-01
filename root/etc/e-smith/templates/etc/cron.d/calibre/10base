@@ -5,7 +5,7 @@
     my $caldb   = esmith::DB::db->open_ro('calibre') || die("Can't open calibre db.");
     my $service = NethServer::Service->new('calibre');
 
-    my $auth            = $calibre{'AuthStatus'} || 'disabled';
+    my $auth            = $calibre{'Auth'} || '';
     my $data_dir        = '/var/lib/nethserver/calibre';
     my $libraries_dir   = $data_dir . '/libraries';
     my $pattern         = qr([:"|><*?\\]|(\/|^)\.{1,2}(\/|$)); # exclusion pattern, matches ':"|><*?\', './', '../', '/..';

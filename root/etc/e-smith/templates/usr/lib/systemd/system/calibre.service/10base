@@ -5,7 +5,7 @@
     my $options = '';
 
     # get values from db
-    my $auth            = $calibre{'AuthStatus'} || 'disabled';
+    my $auth            = $calibre{'Auth'} || '';
     my $auth_mode       = $calibre{'AuthMode'} || '';
     my $ban_after       = $calibre{'BanAfter'} || '';
     my $ban_for         = $calibre{'BanFor'} || '';
@@ -65,7 +65,7 @@
     # if ($timeout =~ m/^\d+$/) { $options .= " --timeout=$timeout"; }
 
     # User Authentication
-    if ($auth eq 'enabled') {
+    if ($auth eq 'internal' || $auth eq 'ldap' || $auth eq 'ad') {
         $options .= " --enable-auth";
         if ($auth_mode) { $options .= " --auth-mode=$auth_mode";}
         $options .= " --userdb=\"$userdb\"";
