@@ -61,7 +61,7 @@
     # Connection
     $options .= " --listen-on=localhost";
     $options .= " --port=$port";
-    if ( ! $vhost && $prefix) {$options .= " --url-prefix=\"/$prefix\"";}
+    if ( ! $vhost && $prefix) {$options .= " --url-prefix=$prefix";}
     # if ($timeout =~ m/^\d+$/) { $options .= " --timeout=$timeout"; }
 
     # User Authentication
